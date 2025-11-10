@@ -66,6 +66,13 @@ python -m orchestrator.main --project-name my_project
 
 ### Running Individual Agents
 
+Using the service runner:
+```bash
+# Run the architecture service using existing specifications
+python service_runner.py --project-name my_project --service architecture --input "$(cat projects/my_project/business/specifications.json)"
+```
+
+Using the orchestrator:
 ```bash
 python -m orchestrator.main --project-name my_project --agent business
 ```
