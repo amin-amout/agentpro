@@ -1,228 +1,190 @@
 {
-  "projectOverview": {
-    "name": "LocalNetChat",
-    "description": "A lightweight desktop/mobile chat application that operates entirely over a local network (LAN). It allows users to exchange text messages, broadcast status updates, and share files without requiring internet connectivity or external servers.",
-    "targetAudience": "Small teams, classrooms, or any environment where users share a local network.",
-    "deploymentModel": "Peer\u2011to\u2011peer with optional local host discovery service.",
-    "platforms": [
-      "Windows",
-      "macOS",
-      "Linux",
-      "Android",
-      "iOS"
+  "ProjectOverview": {
+    "Title": "LocalNetChat",
+    "Description": "A lightweight desktop chat application that enables users on the same local network to exchange text messages, display user status, and share files. The application uses peer\u2011to\u2011peer communication over TCP/UDP and is designed for office, educational, or home environments where internet connectivity is limited or unavailable.",
+    "Scope": "Desktop clients (Windows, macOS, Linux) with optional mobile preview. No external server; all data is transmitted directly between clients.",
+    "Stakeholders": [
+      {
+        "role": "End User",
+        "description": "Employees, students, or home users who need quick local communication."
+      },
+      {
+        "role": "IT Administrator",
+        "description": "Manages network policies and ensures compliance."
+      },
+      {
+        "role": "Developer",
+        "description": "Builds and maintains the application."
+      }
+    ],
+    "Assumptions": [
+      "All clients are on the same subnet or can discover each other via multicast/broadcast.",
+      "Users have permission to open required ports on local firewall.",
+      "File sizes are limited to 100\u202fMB per transfer to keep bandwidth usage reasonable."
+    ],
+    "Constraints": [
+      "No internet or cloud services.",
+      "Cross\u2011platform compatibility with Java 17 (Swing) or Electron/Node.js.",
+      "Security: encryption optional but recommended; no user authentication beyond local login."
     ]
   },
-  "userStories": [
+  "UserStories": [
     {
       "id": "US01",
-      "title": "User Identification",
-      "description": "As a user, I want to choose a unique display name so that others can identify me.",
+      "title": "Discover and connect to peers",
+      "description": "As a user, I want the app to automatically discover other users on the local network so that I can start chatting without manual IP entry.",
       "acceptanceCriteria": [
-        "The app prompts for a username on first launch.",
-        "Duplicate usernames are rejected with an error message."
+        "The app broadcasts a presence packet every 5\u202fseconds.",
+        "A list of online users appears in the UI within 2\u202fseconds of startup.",
+        "Clicking a user initiates a chat window."
       ]
     },
     {
       "id": "US02",
-      "title": "View Online Users",
-      "description": "As a user, I want to see a list of all currently online users along with their status.",
+      "title": "Send and receive text messages",
+      "description": "As a user, I want to send text messages that appear instantly in the chat window.",
       "acceptanceCriteria": [
-        "The user list updates in real time as peers join/leave.",
-        "Each entry shows the user\u2019s display name and status (Online/Offline/Busy/Idle)."
+        "Messages are displayed with timestamp and sender name.",
+        "Message history persists for the current session only."
       ]
     },
     {
       "id": "US03",
-      "title": "Send & Receive Text Messages",
-      "description": "As a user, I want to send text messages to individual peers and receive them instantly.",
+      "title": "View user status",
+      "description": "As a user, I want to see whether other users are online, away, or offline.",
       "acceptanceCriteria": [
-        "Messages appear in a chat window with timestamp.",
-        "The message is delivered within 200\u202fms on a typical LAN."
+        "Status updates are broadcast every 10\u202fseconds.",
+        "Status changes are reflected in the user list in real time."
       ]
     },
     {
       "id": "US04",
-      "title": "Broadcast Status",
-      "description": "As a user, I want to set my status (Online/Busy/Idle) so that others can see my availability.",
+      "title": "Share files with peers",
+      "description": "As a user, I want to send a file to another user and receive a prompt to accept or decline.",
       "acceptanceCriteria": [
-        "Status changes are reflected in the user list immediately.",
-        "Status persists across application restarts."
+        "File transfer initiates after user confirms.",
+        "Transfer progress bar is visible.",
+        "Accepted files are saved to a user\u2011defined folder."
       ]
     },
     {
       "id": "US05",
-      "title": "File Sharing",
-      "description": "As a user, I want to send files up to 50\u202fMB to a peer, and receive them with progress feedback.",
+      "title": "Handle network interruptions",
+      "description": "As a user, I want the app to notify me if a peer disconnects or the network is lost.",
       "acceptanceCriteria": [
-        "The file transfer completes within 5\u202fseconds on a 100\u202fMbps LAN.",
-        "The recipient can cancel the transfer mid\u2011stream."
-      ]
-    },
-    {
-      "id": "US06",
-      "title": "Chat History",
-      "description": "As a user, I want to view previous messages exchanged with a peer when I open the chat window.",
-      "acceptanceCriteria": [
-        "Messages are persisted locally for 30\u202fdays.",
-        "History is loaded instantly on opening a conversation."
-      ]
-    },
-    {
-      "id": "US07",
-      "title": "Cross\u2011Platform Consistency",
-      "description": "As a user, I want the same user experience on all supported platforms.",
-      "acceptanceCriteria": [
-        "UI elements are responsive and use native controls where appropriate.",
-        "Feature set is identical across platforms."
+        "Disconnection causes a status change to offline.",
+        "Attempting to send a message to a disconnected user shows an error."
       ]
     }
   ],
-  "functionalRequirements": [
+  "FunctionalRequirements": [
     {
       "id": "FR01",
-      "name": "Peer Discovery",
-      "description": "Automatically discover peers on the same subnet using mDNS/UDP broadcast.",
-      "details": [
-        "Broadcast a presence packet every 5\u202fseconds.",
-        "Listen for presence packets from other peers."
-      ]
+      "description": "Network discovery",
+      "details": "Implement UDP multicast/broadcast to announce presence and listen for peers. Each client sends a JSON packet containing user ID, name, status, and listening port."
     },
     {
       "id": "FR02",
-      "name": "Secure Communication",
-      "description": "Encrypt all messages and file transfers using TLS 1.3 over a local socket.",
-      "details": [
-        "Generate a self\u2011signed certificate on first launch.",
-        "Use mutual authentication between peers."
-      ]
+      "description": "Peer connection establishment",
+      "details": "When a user selects a peer, the client initiates a TCP connection on the peer's advertised port. The connection is used for text and file transfer."
     },
     {
       "id": "FR03",
-      "name": "Message Queue",
-      "description": "Queue outgoing messages and retry on transient network failures.",
-      "details": [
-        "Retry up to 3 times with exponential backoff.",
-        "Notify the user if a message cannot be delivered after retries."
-      ]
+      "description": "Message protocol",
+      "details": "Define a lightweight JSON schema for messages: {type:'msg', from:'id', to:'id', timestamp:'ISO8601', content:'text'}."
     },
     {
       "id": "FR04",
-      "name": "File Transfer Protocol",
-      "description": "Implement chunked transfer with checksum verification.",
-      "details": [
-        "Chunk size: 1\u202fMB.",
-        "Provide progress bar and ETA."
-      ]
+      "description": "Status protocol",
+      "details": "Send periodic status updates: {type:'status', id:'id', status:'online|away|offline'}."
     },
     {
       "id": "FR05",
-      "name": "Status Update Service",
-      "description": "Send periodic status updates to peers.",
-      "details": [
-        "Update interval: 30\u202fseconds.",
-        "Include idle detection based on user activity."
-      ]
+      "description": "File transfer protocol",
+      "details": "Use a separate TCP stream with header: {type:'file', from:'id', to:'id', filename:'string', size:bytes}. Followed by raw file bytes. Support pause/resume via checksum verification."
     },
     {
       "id": "FR06",
-      "name": "Local Persistence",
-      "description": "Store user settings, chat history, and recent file transfer logs locally.",
-      "details": [
-        "Use SQLite for structured data.",
-        "Encrypt the database at rest."
-      ]
+      "description": "User interface",
+      "details": "Main window shows user list with status icons, chat area, and file transfer panel. Context menu to start chat or send file."
+    },
+    {
+      "id": "FR07",
+      "description": "Configuration",
+      "details": "Allow user to set display name, status message, and default download folder."
+    },
+    {
+      "id": "FR08",
+      "description": "Encryption (optional)",
+      "details": "Provide a toggle to enable TLS for all peer connections."
     }
   ],
-  "nonFunctionalRequirements": [
+  "NonFunctionalRequirements": [
     {
       "id": "NFR01",
-      "name": "Performance",
-      "description": "All UI interactions must be responsive (<200\u202fms).",
-      "metrics": "Message latency <200\u202fms; file transfer throughput \u226580\u202f% of theoretical LAN speed."
+      "description": "Performance",
+      "details": "Message latency < 200\u202fms on a typical LAN. File transfer throughput \u2265 5\u202fMbps."
     },
     {
       "id": "NFR02",
-      "name": "Scalability",
-      "description": "Support up to 50 concurrent peers on a single subnet.",
-      "metrics": "CPU usage <30\u202f% on a 2\u202fGHz CPU; memory <200\u202fMB."
+      "description": "Scalability",
+      "details": "Support up to 50 concurrent peers without noticeable UI lag."
     },
     {
       "id": "NFR03",
-      "name": "Reliability",
-      "description": "The application must recover from network interruptions without data loss.",
-      "metrics": "Automatic reconnection within 5\u202fseconds; no message duplication."
+      "description": "Reliability",
+      "details": "Automatic reconnection attempts every 5\u202fseconds if connection drops."
     },
     {
       "id": "NFR04",
-      "name": "Security",
-      "description": "Ensure confidentiality, integrity, and authenticity of all communications.",
-      "metrics": "TLS 1.3 used; no plaintext logs; no data sent outside the local network."
+      "description": "Usability",
+      "details": "All primary actions (send message, send file, change status) must be accessible via keyboard shortcuts."
     },
     {
       "id": "NFR05",
-      "name": "Usability",
-      "description": "Interface should be intuitive for non\u2011technical users.",
-      "metrics": "First\u2011time user onboarding <3\u202fminutes; error rate <2\u202f%."
+      "description": "Security",
+      "details": "Data in transit is encrypted if TLS is enabled. No sensitive data is stored on disk."
     },
     {
       "id": "NFR06",
-      "name": "Compliance",
-      "description": "Comply with GDPR for local data handling.",
-      "metrics": "No personal data stored on external servers."
+      "description": "Compatibility",
+      "details": "Runs on Windows 10+, macOS 10.13+, and Ubuntu 18.04+."
     }
   ],
-  "businessRules": [
+  "BusinessRules": [
     {
       "id": "BR01",
-      "rule": "All communications occur exclusively within the local subnet; no external IP or DNS resolution is permitted.",
-      "explanation": "Ensures data privacy and reduces latency."
+      "description": "All users must be on the same subnet or have multicast support for discovery to work."
     },
     {
       "id": "BR02",
-      "rule": "Maximum file size for transfer is 50\u202fMB.",
-      "explanation": "Prevents excessive bandwidth usage on shared networks."
+      "description": "File size limit per transfer is 100\u202fMB; larger files must be split or rejected."
     },
     {
       "id": "BR03",
-      "rule": "Usernames must be unique per subnet.",
-      "explanation": "Avoids confusion in user lists."
+      "description": "If a user sets status to 'away', they cannot receive file transfer requests."
     },
     {
       "id": "BR04",
-      "rule": "Message history retention period is 30\u202fdays.",
-      "explanation": "Balances storage usage with user expectations."
-    },
-    {
-      "id": "BR05",
-      "rule": "The application must not require administrative privileges to run.",
-      "explanation": "Facilitates deployment in restricted environments."
+      "description": "The application must log all connection attempts for audit purposes but must not log message contents."
     }
   ],
-  "successCriteria": [
+  "SuccessCriteria": [
     {
       "id": "SC01",
-      "criterion": "All user stories are fully implemented and pass automated tests.",
-      "target": "100\u202f% coverage."
+      "description": "All user stories are implemented and pass automated unit and integration tests."
     },
     {
       "id": "SC02",
-      "criterion": "Message latency on a 100\u202fMbps LAN is <200\u202fms.",
-      "target": "Measured in a controlled lab test."
+      "description": "The app is stable on all targeted platforms with no memory leaks (> 512\u202fMB RAM usage)."
     },
     {
       "id": "SC03",
-      "criterion": "File transfer of 50\u202fMB completes in <5\u202fseconds on a 100\u202fMbps LAN.",
-      "target": "Measured in a controlled lab test."
+      "description": "User acceptance test score \u2265 90\u202f% on usability survey."
     },
     {
       "id": "SC04",
-      "criterion": "The application runs on all target platforms without crashes.",
-      "target": "Automated UI and integration tests pass on Windows, macOS, Linux, Android, iOS."
-    },
-    {
-      "id": "SC05",
-      "criterion": "Security audit confirms TLS 1.3 usage and no plaintext data leakage.",
-      "target": "Passes penetration test."
+      "description": "Network traffic analysis shows minimal overhead: discovery packets < 1\u202fkB, message packets < 512\u202fB."
     }
   ]
 }

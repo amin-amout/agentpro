@@ -1,411 +1,236 @@
 {
-  "systemOverview": {
-    "name": "LocalNetChat",
-    "description": "A lightweight, cross\u2011platform desktop/mobile chat application that operates entirely within a local subnet using peer\u2011to\u2011peer communication. It provides instant messaging, status broadcasting, and file sharing up to 50\u202fMB without any external servers or internet connectivity.",
-    "corePrinciples": [
-      "No external network traffic \u2013 all traffic is confined to the LAN.",
-      "Zero\u2011configuration \u2013 automatic peer discovery and self\u2011signed TLS certificates.",
-      "High performance \u2013 sub\u2011200\u202fms latency for messages, <5\u202fs transfer for 50\u202fMB on 100\u202fMbps LAN.",
-      "Privacy\u2011first \u2013 local persistence only, GDPR compliant."
+  "SystemOverview": {
+    "Title": "LocalNetChat",
+    "Description": "A cross-platform, peer-to-peer desktop chat and file-sharing application that operates entirely on a local network without external servers. It discovers peers via UDP multicast, establishes TCP connections for text and file exchange, and optionally secures traffic with TLS.",
+    "Scope": "Desktop clients (Windows 10+, macOS 10.13+, Ubuntu 18.04+). Optional mobile preview (Android/iOS).",
+    "Stakeholders": [
+      {
+        "role": "End User",
+        "description": "Employees, students, or home users who need quick local communication."
+      },
+      {
+        "role": "IT Administrator",
+        "description": "Manages network policies and ensures compliance."
+      },
+      {
+        "role": "Developer",
+        "description": "Builds and maintains the application."
+      }
     ],
-    "targetAudience": [
-      "Small teams",
-      "Classrooms",
-      "Any environment with a shared local network"
+    "Assumptions": [
+      "All clients are on the same subnet or can discover each other via multicast/broadcast.",
+      "Users have permission to open required ports on local firewall.",
+      "File sizes are limited to 100 MB per transfer to keep bandwidth usage reasonable."
     ],
-    "platforms": [
-      "Windows",
-      "macOS",
-      "Linux",
-      "Android",
-      "iOS"
+    "Constraints": [
+      "No internet or cloud services.",
+      "Cross-platform compatibility with Java 17 (Swing) or Electron/Node.js.",
+      "Security: encryption optional but recommended; no user authentication beyond local login."
     ],
-    "deploymentModel": "Peer\u2011to\u2011peer with optional local bootstrap host discovery (mDNS/UDP)."
+    "SuccessCriteria": [
+      {
+        "id": "SC01",
+        "description": "All user stories are implemented and pass automated unit and integration tests."
+      },
+      {
+        "id": "SC02",
+        "description": "The app is stable on all targeted platforms with no memory leaks (>512 MB RAM usage)."
+      },
+      {
+        "id": "SC03",
+        "description": "User acceptance test score >= 90 % on usability survey."
+      },
+      {
+        "id": "SC04",
+        "description": "Network traffic analysis shows minimal overhead: discovery packets < 1 kB, message packets < 512 B."
+      }
+    ]
   },
-  "componentArchitecture": [
-    {
-      "name": "DiscoveryService",
-      "role": "Automatically discovers peers on the same subnet.",
-      "protocol": "mDNS/UDP broadcast",
-      "operations": [
-        "Broadcast presence packet every 5\u202fs",
-        "Listen for presence packets from other peers",
-        "Maintain active peer list with TTL"
-      ],
-      "platformSpecifics": {
-        "desktop": "Java\u00a0NIO + JmDNS",
-        "mobile": "MulticastSocket (Android) / NetworkExtension (iOS)"
-      }
-    },
-    {
-      "name": "ConnectionManager",
-      "role": "Handles TCP/TLS connections between peers.",
-      "protocol": "TLS\u00a01.3 over TCP sockets",
-      "operations": [
-        "Generate self\u2011signed cert on first launch",
-        "Mutual authentication with peer certificates",
-        "Automatic reconnection with exponential back\u2011off",
-        "Connection pooling for active peers"
+  "ComponentArchitecture": {
+    "PresentationLayer": {
+      "Description": "Swing/Electron UI, responsible for user interaction, status display, chat windows, file transfer dialogs, and keyboard shortcuts.",
+      "Modules": [
+        "MainWindow",
+        "UserListPanel",
+        "ChatWindow",
+        "FileTransferPanel",
+        "SettingsDialog"
       ]
     },
-    {
-      "name": "EncryptionService",
-      "role": "Wraps all payloads in TLS 1.3 and provides checksum verification for file chunks.",
-      "operations": [
-        "Encrypt/decrypt message and file data",
-        "Generate SHA\u2011256 checksum per chunk",
-        "Validate integrity on receipt"
+    "DiscoveryService": {
+      "Description": "UDP multicast/broadcast component that sends and receives presence packets.",
+      "Responsibilities": [
+        "Broadcast presence every 5 s: JSON {type:'presence', id, name, status, port, ttl}",
+        "Listen for incoming presence packets and maintain a live peer cache.",
+        "Publish status updates every 10 s: JSON {type:'status', id, status}"
       ]
     },
-    {
-      "name": "MessagingService",
-      "role": "Queues, sends, and receives text messages.",
-      "operations": [
-        "Queue outgoing messages with retry logic (max 3 attempts, exponential back\u2011off)",
-        "Deliver messages to local UI in <200\u202fms",
-        "Persist messages to SQLite with timestamp"
+    "PeerConnectionManager": {
+      "Description": "Manages TCP sockets per peer, handles connection lifecycle, reconnection logic, and optional TLS.",
+      "Responsibilities": [
+        "Open outgoing TCP connection when user initiates chat/file transfer.",
+        "Accept incoming TCP connections on advertised port.",
+        "Maintain connection health and retry every 5 s if dropped.",
+        "Log connection attempts (audit) without logging message content."
       ]
     },
-    {
-      "name": "FileTransferService",
-      "role": "Chunked file transfer with progress reporting.",
-      "operations": [
-        "Split file into 1\u202fMB chunks",
-        "Send chunks over TLS with checksum",
-        "Track progress & ETA",
-        "Support cancel/abort mid\u2011stream",
-        "Persist transfer logs"
+    "MessageHandler": {
+      "Description": "Encodes/decodes JSON message frames and routes them to the UI.",
+      "Responsibilities": [
+        "Send/receive {type:'msg', from, to, timestamp, content}",
+        "Enforce in-memory session history only."
       ]
     },
-    {
-      "name": "StatusService",
-      "role": "Broadcasts and consumes user status.",
-      "operations": [
-        "Send status updates every 30\u202fs",
-        "Detect idle state from OS activity APIs",
-        "Persist current status across restarts"
+    "FileTransferService": {
+      "Description": "Handles file transfer protocol over a dedicated TCP stream.",
+      "Responsibilities": [
+        "Send header {type:'file', from, to, filename, size, checksum}",
+        "Stream raw file bytes with optional pause/resume.",
+        "Validate checksum on receipt.",
+        "Reject files >100 MB and notify user."
       ]
     },
-    {
-      "name": "PersistenceService",
-      "role": "Local storage layer.",
-      "storage": "SQLite (encrypted with AES\u2011256 GCM)",
-      "tables": [
-        "users",
-        "messages",
-        "files",
-        "settings",
-        "transfer_logs"
-      ],
-      "retentionPolicy": {
-        "messages": "30\u202fdays",
-        "files": "no limit, user\u2011initiated delete only"
-      }
-    },
-    {
-      "name": "UI/UX Layer",
-      "role": "Cross\u2011platform front\u2011end.",
-      "framework": "Flutter (Dart)",
-      "features": [
-        "Responsive design, native controls per platform",
-        "Chat window with timestamps",
-        "File transfer progress bar",
-        "User list with real\u2011time status",
-        "Onboarding wizard for first launch"
+    "ConfigurationManager": {
+      "Description": "Persist user settings in a local encrypted file (optional).",
+      "Responsibilities": [
+        "Store display name, status message, default download folder, TLS toggle."
       ]
     },
-    {
-      "name": "NotificationService",
-      "role": "System notifications for incoming messages, file transfer status, and errors.",
-      "platformSpecifics": {
-        "desktop": "Toast/Notification Center",
-        "mobile": "Push notifications (local only)"
-      }
-    }
-  ],
-  "dataModel": {
-    "tables": [
-      {
-        "name": "users",
-        "columns": [
-          {
-            "name": "id",
-            "type": "INTEGER",
-            "primaryKey": true
-          },
-          {
-            "name": "display_name",
-            "type": "TEXT",
-            "unique": true
-          },
-          {
-            "name": "status",
-            "type": "TEXT",
-            "default": "Online"
-          },
-          {
-            "name": "last_seen",
-            "type": "DATETIME"
-          }
-        ]
-      },
-      {
-        "name": "messages",
-        "columns": [
-          {
-            "name": "id",
-            "type": "INTEGER",
-            "primaryKey": true
-          },
-          {
-            "name": "conversation_id",
-            "type": "INTEGER"
-          },
-          {
-            "name": "sender_id",
-            "type": "INTEGER"
-          },
-          {
-            "name": "receiver_id",
-            "type": "INTEGER"
-          },
-          {
-            "name": "content",
-            "type": "TEXT"
-          },
-          {
-            "name": "timestamp",
-            "type": "DATETIME"
-          },
-          {
-            "name": "delivered",
-            "type": "BOOLEAN"
-          },
-          {
-            "name": "read",
-            "type": "BOOLEAN"
-          }
-        ]
-      },
-      {
-        "name": "conversations",
-        "columns": [
-          {
-            "name": "id",
-            "type": "INTEGER",
-            "primaryKey": true
-          },
-          {
-            "name": "peer_id",
-            "type": "INTEGER"
-          }
-        ]
-      },
-      {
-        "name": "files",
-        "columns": [
-          {
-            "name": "id",
-            "type": "INTEGER",
-            "primaryKey": true
-          },
-          {
-            "name": "conversation_id",
-            "type": "INTEGER"
-          },
-          {
-            "name": "sender_id",
-            "type": "INTEGER"
-          },
-          {
-            "name": "receiver_id",
-            "type": "INTEGER"
-          },
-          {
-            "name": "file_name",
-            "type": "TEXT"
-          },
-          {
-            "name": "file_size",
-            "type": "INTEGER"
-          },
-          {
-            "name": "chunk_count",
-            "type": "INTEGER"
-          },
-          {
-            "name": "status",
-            "type": "TEXT"
-          },
-          {
-            "name": "created_at",
-            "type": "DATETIME"
-          },
-          {
-            "name": "completed_at",
-            "type": "DATETIME",
-            "nullable": true
-          }
-        ]
-      },
-      {
-        "name": "settings",
-        "columns": [
-          {
-            "name": "key",
-            "type": "TEXT",
-            "primaryKey": true
-          },
-          {
-            "name": "value",
-            "type": "TEXT"
-          }
-        ]
-      }
-    ],
-    "encryption": "AES\u2011256 GCM for SQLite database files",
-    "checksumAlgorithm": "SHA\u2011256"
-  },
-  "apiDesign": {
-    "protocol": "Custom TCP/TLS 1.3",
-    "messageFormats": {
-      "PresencePacket": {
-        "type": "presence",
-        "payload": {
-          "display_name": "string",
-          "status": "string",
-          "public_key": "base64",
-          "timestamp": "ISO8601"
-        }
-      },
-      "StatusUpdate": {
-        "type": "status",
-        "payload": {
-          "status": "string",
-          "timestamp": "ISO8601"
-        }
-      },
-      "ChatMessage": {
-        "type": "chat",
-        "payload": {
-          "conversation_id": "int",
-          "sender_id": "int",
-          "content": "string",
-          "timestamp": "ISO8601"
-        }
-      },
-      "FileMeta": {
-        "type": "file_meta",
-        "payload": {
-          "conversation_id": "int",
-          "file_name": "string",
-          "file_size": "int",
-          "chunk_size": "int",
-          "total_chunks": "int",
-          "checksum": "hex"
-        }
-      },
-      "FileChunk": {
-        "type": "file_chunk",
-        "payload": {
-          "chunk_index": "int",
-          "data": "base64",
-          "checksum": "hex"
-        }
-      },
-      "Control": {
-        "type": "control",
-        "payload": {
-          "action": "string",
-          "details": "object"
-        }
-      }
+    "SecurityModule": {
+      "Description": "Optional TLS wrapper for all TCP streams.",
+      "Responsibilities": [
+        "Generate self-signed certificates per instance.",
+        "Provide encryption toggle in settings."
+      ]
     },
-    "endpoints": [
-      {
-        "name": "SendMessage",
-        "method": "POST",
-        "path": "/message",
-        "requestBody": "ChatMessage",
-        "response": "{status: 'queued' | 'failed'}"
-      },
-      {
-        "name": "SendFile",
-        "method": "POST",
-        "path": "/file/init",
-        "requestBody": "FileMeta",
-        "response": "{file_id: int}"
-      },
-      {
-        "name": "SendFileChunk",
-        "method": "POST",
-        "path": "/file/chunk",
-        "requestBody": "FileChunk",
-        "response": "{chunk_index: int, status: 'ok' | 'checksum_mismatch'}"
-      }
-    ],
-    "security": {
-      "tlsVersion": "1.3",
-      "mutualAuth": true,
-      "certificateStore": "Local keystore per peer"
+    "LoggingService": {
+      "Description": "Audit log of connection attempts and status changes.",
+      "Responsibilities": [
+        "Write to local file with timestamp, peer id, event type.",
+        "Exclude message payloads."
+      ]
     }
   },
-  "technologyStack": {
-    "frontend": {
-      "framework": "Flutter (Dart)",
-      "uiLibraries": [
-        "flutter_bloc",
-        "provider",
-        "cached_network_image"
-      ],
-      "nativeIntegrations": [
-        "Platform Channels for OS idle detection",
-        "Notification plugin"
-      ]
+  "DataModel": {
+    "Peer": {
+      "id": "UUID string",
+      "name": "String",
+      "status": "online|away|offline",
+      "port": "Integer",
+      "lastSeen": "ISO8601 timestamp"
     },
-    "backend": {
-      "runtime": "Dart (VM)",
-      "libraries": [
-        "dart:io",
-        "dart:async",
-        "package:mdns",
-        "package:tls",
-        "package:sqflite",
-        "package:path_provider"
-      ],
-      "crypto": "OpenSSL via dart:io TLS",
-      "db": "SQLite (encrypted with sqlcipher)"
+    "PresencePacket": {
+      "type": "presence",
+      "id": "String",
+      "name": "String",
+      "status": "String",
+      "port": "Integer",
+      "ttl": "Integer (seconds)"
     },
-    "networking": {
-      "discovery": "mDNS / UDP broadcast",
-      "transport": "TCP sockets over TLS 1.3",
-      "protocol": "Custom JSON\u2011over\u2011TLS"
+    "StatusPacket": {
+      "type": "status",
+      "id": "String",
+      "status": "String"
     },
-    "platformTools": {
-      "windows": "MSVC, CMake",
-      "macos": "Xcode, CocoaPods",
-      "linux": "gcc, apt",
-      "android": "Gradle, AOSP",
-      "ios": "Xcode, CocoaPods"
+    "MessagePacket": {
+      "type": "msg",
+      "from": "String",
+      "to": "String",
+      "timestamp": "ISO8601",
+      "content": "String"
     },
-    "build": {
-      "CI": "GitHub Actions",
-      "artifact": "AppBundle for each platform"
+    "FileHeader": {
+      "type": "file",
+      "from": "String",
+      "to": "String",
+      "filename": "String",
+      "size": "Integer",
+      "checksum": "SHA-256 hex string"
     }
   },
-  "deploymentArchitecture": {
-    "model": "Peer\u2011to\u2011peer, no central server",
-    "bootstrap": "Optional local host discovery service (mDNS responder) bundled in each client",
-    "networkConstraints": "All traffic limited to local subnet (10.0.0.0/8, 192.168.0.0/16, etc.)",
-    "resourceLimits": {
-      "maxPeers": 50,
-      "maxConcurrentTransfers": 5
+  "APIDesign": {
+    "DiscoveryAPI": {
+      "broadcastPresence": {
+        "method": "UDP",
+        "interval": "5s",
+        "payload": "PresencePacket"
+      },
+      "receivePresence": {
+        "method": "UDP",
+        "handler": "updatePeerCache(Peer)"
+      }
     },
-    "scalabilityPlan": "Each peer runs a lightweight connection manager; no shared state required. For larger clusters, a dedicated local bootstrap node can be deployed to reduce discovery traffic.",
-    "securityControls": {
-      "firewallRules": "Allow outbound TCP 0\u201165535 to local subnet only",
-      "certificateRotation": "Self\u2011signed certs persist for 2\u202fyears or until user deletes the app"
+    "StatusAPI": {
+      "broadcastStatus": {
+        "method": "UDP",
+        "interval": "10s",
+        "payload": "StatusPacket"
+      }
     },
-    "maintenance": "No server-side updates; application updates are delivered via standard OS installers (Windows MSI, macOS DMG, Linux DEB/RPM, Android APK, iOS IPA)."
+    "PeerConnectionAPI": {
+      "connectToPeer(peerId)": {
+        "action": "TCP connect to advertised port",
+        "tlsEnabled": "boolean"
+      },
+      "acceptConnection": {
+        "action": "listen on local port",
+        "protocol": "TCP"
+      }
+    },
+    "MessageAPI": {
+      "sendMessage(toId, content)": {
+        "payload": "MessagePacket",
+        "transport": "TCP"
+      },
+      "receiveMessage(handler)": {
+        "transport": "TCP",
+        "handler": "displayMessage(MessagePacket)"
+      }
+    },
+    "FileTransferAPI": {
+      "requestFile(toId, filePath)": {
+        "payload": "FileHeader",
+        "transport": "TCP",
+        "postSend": "displayProgress"
+      },
+      "receiveFile(handler)": {
+        "transport": "TCP",
+        "handler": "writeFile(FileHeader, stream)"
+      }
+    }
+  },
+  "TechnologyStack": {
+    "CoreLanguage": "Java 17 (Swing) or Node.js 20 (Electron)",
+    "Networking": "Java NIO / Node.js net module",
+    "Serialization": "Jackson (Java) or JSON5 (Node.js)",
+    "TLS": "Java SSLContext / Node.js TLS module",
+    "UI": "Swing (Java) or HTML/CSS/React (Electron)",
+    "BuildTool": "Maven (Java) or npm/yarn (Electron)",
+    "Testing": "JUnit 5 / TestFX (Java) or Jest + Spectron (Electron)",
+    "Packaging": "jpackage (Java) or Electron Packager",
+    "CrossPlatformSupport": "JavaFX/Native look-and-feel or Electron auto-update",
+    "Logging": "SLF4J + Logback (Java) or Winston (Node.js)",
+    "Configuration": "Properties file (Java) or JSON (Electron)",
+    "Checksum": "SHA-256 (built-in libraries)"
+  },
+  "DeploymentArchitecture": {
+    "Installation": {
+      "Windows": "MSI or EXE built with jpackage / Electron Installer",
+      "macOS": "DMG or PKG",
+      "Linux": "AppImage / DEB / RPM"
+    },
+    "Execution": {
+      "Auto-start": "Optional system tray icon; user can launch manually.",
+      "Firewall": "Requests to open UDP multicast port 5000 and TCP port range 6000-6100.",
+      "Privileges": "No admin rights required; uses standard user directories for downloads."
+    },
+    "UpdateStrategy": {
+      "Desktop": "In-app self-update via local file or network-based update server (optional).",
+      "MobilePreview": "APK/IPA built separately."
+    },
+    "ResourceConstraints": {
+      "Memory": "<512 MB per instance",
+      "CPU": "Single thread for UI, separate thread pool for networking (max 4 threads)."
+    }
   }
 }
