@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JavaScript Ping Pong Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root {
+  --primary-color: #2196F3;
+  --secondary-color: #FF5722;
+  --background-color: #222;
+  --text-color: #fff;
+  --font-family: 'Arial', sans-serif;
+  --control-bg: rgba(0,0,0,0.4);
+  --control-hover: rgba(0,0,0,0.6);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+header {
+  width: 100%;
+  text-align: center;
+  padding: 1rem 0;
+}
+#scoreboard {
+  display: flex;
+  justify-content: space-between;
+  max-width: 800px;
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1.5rem;
+}
+#gameContainer {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 4 / 3;
+  background: #000;
+}
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+#controls {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+button, select, input[type="number"] {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  background: var(--control-bg);
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover, select:hover, input[type="number"]:hover {
+  background: var(--control-hover);
+}
+@media (max-width: 480px) {
+  #controls { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ping Pong</h1>
+  <div id="scoreboard" aria-label="Scoreboard">
+    <span id="player1Score">0</span> : <span id="player2Score">0</span>
+  </div>
+</header>
+<div id="gameContainer">
+  <canvas id="gameCanvas" aria-label="Ping Pong game canvas"></canvas>
+</div>
+<div id="controls" role="toolbar" aria-label="Game controls">
+  <button id="startBtn" aria-label="Start game">Start</button>
+  <button id="pauseBtn" aria-label="Pause game">Pause</button>
+  <button id="resetBtn" aria-label="Reset game">Reset</button>
+  <label for="modeSelect">Mode:</label>
+  <select id="modeSelect" aria-label="Game mode">
+    <option value="single">Single Player</option>
+    <option value="two">Two Players</option>
+  </select>
+  <label for="difficultySelect">Difficulty:</label>
+  <select id="difficultySelect" aria-label="AI difficulty">
+    <option value="easy">Easy</option>
+    <option value="medium" selected>Medium</option>
+    <option value="hard">Hard</option>
+  </select>
+  <label for="bestOfInput">Best Of:</label>
+  <input type="number" id="bestOfInput" min="1" max="21" value="5" aria-label="Best of games">
+</div>
+<script type="module">
+import { GameEngine } from './src/GameEngine.js';
+import { SettingsManager } from './src/SettingsManager.js';
+import { ScoreManager } from './src/ScoreManager.js';
+import { EventBus } from './src/EventBus.js';
+
+const canvas = document.getElementById('gameCanvas');
+const engine = new GameEngine(canvas);
+const settingsManager = new SettingsManager();
+const scoreManager = new ScoreManager();
+
+// UI elements
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+const modeSelect = document.getElementById('modeSelect');
+const difficultySelect = document.getElementById('difficultySelect');
+const bestOfInput = document.getElementById('bestOfInput');
+const player1ScoreEl = document.getElementById('player1Score');
+const player2ScoreEl = document.getElementById('player2Score');
+
+// Update score display
+EventBus.on('scoreUpdated', ({ player1, player2 }) => {
+  player1ScoreEl.textContent = player1;
+  player2ScoreEl.textContent = player2;
+});
+
+// Settings change handlers
+modeSelect.addEventListener('change', () => {
+  const mode = modeSelect.value;
+  engine.setMode(mode);
+  settingsManager.setMode(mode);
+});
+difficultySelect.addEventListener('change', () => {
+  const level = difficultySelect.value;
+  engine.setDifficulty(level);
+  settingsManager.setDifficulty(level);
+});
+bestOfInput.addEventListener('input', () => {
+  const bestOf = parseInt(bestOfInput.value, 10) || 5;
+  settingsManager.setBestOf(bestOf);
+});
+
+// Control buttons
+startBtn.addEventListener('click', () => engine.start());
+pauseBtn.addEventListener('click', () => engine.pause());
+resetBtn.addEventListener('click', () => engine.reset());
+
+// Keyboard shortcuts
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); engine.pause(); }
+  if (e.key.toLowerCase() === 'r') { engine.reset(); }
+});
+
+// Initialize with stored settings
+engine.setMode(settingsManager.getMode());
+engine.setDifficulty(settingsManager.getDifficulty());
+engine.setBestOf(settingsManager.getBestOf());
+
+// Load high score
+const highScore = scoreManager.loadHighScore();
+if (highScore) {
+  const highScoreEl = document.createElement('div');
+  highScoreEl.textContent = `High Score: ${highScore}`;
+  highScoreEl.style.textAlign = 'center';
+  highScoreEl.style.padding = '0.5rem';
+  document.body.appendChild(highScoreEl);
+}
+
+// Responsive canvas
+window.addEventListener('resize', () => engine.resizeCanvas());
+engine.resizeCanvas();
+</script>
+</body>
+</html>

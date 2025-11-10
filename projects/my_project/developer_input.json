@@ -1,0 +1,833 @@
+{
+  "architecture": {
+    "SystemOverview": {
+      "title": "JavaScript Ping Pong Game",
+      "description": "A lightweight, browser-based, real-time ping pong game built with HTML5 Canvas and vanilla JavaScript. The architecture follows a modular single-page application pattern, enabling easy extension, unit testing, and responsive UI across desktop and mobile browsers.",
+      "corePrinciples": [
+        "Pure client-side - no server required",
+        "ES6 modules for encapsulation",
+        "High frame-rate (>=60 FPS) via requestAnimationFrame",
+        "Responsive canvas with aspect-ratio preservation",
+        "Persist high scores locally using localStorage",
+        "Zero external dependencies"
+      ]
+    },
+    "ComponentArchitecture": {
+      "modules": [
+        {
+          "name": "GameEngine",
+          "responsibilities": [
+            "Orchestrates game loop",
+            "Manages state transitions (start, pause, reset)",
+            "Coordinates physics, AI, and rendering each frame"
+          ],
+          "publicApi": [
+            "start()",
+            "pause()",
+            "reset()",
+            "setMode(mode)",
+            "setDifficulty(level)"
+          ]
+        },
+        {
+          "name": "CanvasRenderer",
+          "responsibilities": [
+            "Draws paddles, ball, net, scoreboard",
+            "Handles responsive resizing",
+            "Applies visual feedback (flashing ball, paddle color change)"
+          ],
+          "publicApi": [
+            "render(state)",
+            "resize(width, height)"
+          ]
+        },
+        {
+          "name": "PhysicsEngine",
+          "responsibilities": [
+            "Calculates ball velocity and angle",
+            "Detects collisions (paddle, walls, net)",
+            "Applies friction and speed scaling"
+          ],
+          "publicApi": [
+            "updateBall(state, deltaTime)",
+            "handleCollision(state)"
+          ]
+        },
+        {
+          "name": "Paddle",
+          "responsibilities": [
+            "Encapsulates paddle position, size, and movement constraints",
+            "Exposes methods to update based on input or AI"
+          ],
+          "publicApi": [
+            "moveTo(y)",
+            "clamp()",
+            "getBounds()"
+          ]
+        },
+        {
+          "name": "Ball",
+          "responsibilities": [
+            "Encapsulates ball position, velocity, radius",
+            "Provides methods to reset and update position"
+          ],
+          "publicApi": [
+            "reset()",
+            "update(deltaTime)"
+          ]
+        },
+        {
+          "name": "AI",
+          "responsibilities": [
+            "Computes paddle movement based on ball position and difficulty",
+            "Implements reaction delay and anticipation"
+          ],
+          "publicApi": [
+            "update(state)",
+            "setDifficulty(level)"
+          ]
+        },
+        {
+          "name": "InputHandler",
+          "responsibilities": [
+            "Maps mouse, touch, and keyboard events to paddle movement",
+            "Ensures separation of control for each player"
+          ],
+          "publicApi": [
+            "init()",
+            "destroy()",
+            "getPlayerInput()"
+          ]
+        },
+        {
+          "name": "ScoreManager",
+          "responsibilities": [
+            "Tracks current score and high score",
+            "Persists high score to localStorage",
+            "Notifies UI on score changes"
+          ],
+          "publicApi": [
+            "increment(player)",
+            "reset()",
+            "getScores()",
+            "loadHighScore()",
+            "saveHighScore()"
+          ]
+        },
+        {
+          "name": "SettingsManager",
+          "responsibilities": [
+            "Holds game mode, difficulty, best-of settings",
+            "Provides UI for changing settings"
+          ],
+          "publicApi": [
+            "setMode()",
+            "setDifficulty()",
+            "getSettings()"
+          ]
+        },
+        {
+          "name": "EventBus",
+          "responsibilities": [
+            "Facilitates decoupled communication between modules",
+            "Publishes events such as 'pointScored', 'gameOver'"
+          ],
+          "publicApi": [
+            "on(event, handler)",
+            "emit(event, payload)"
+          ]
+        },
+        {
+          "name": "Utils",
+          "responsibilities": [
+            "Common helper functions (random angle, clamp, debounce, etc.)"
+          ],
+          "publicApi": [
+            "randomAngle()",
+            "clamp(value, min, max)",
+            "debounce(fn, delay)"
+          ]
+        }
+      ]
+    },
+    "DataModel": {
+      "GameState": {
+        "players": [
+          {
+            "id": "player1",
+            "paddle": {
+              "x": 20,
+              "y": 0,
+              "width": 10,
+              "height": 80
+            },
+            "score": 0,
+            "color": "#FF5722"
+          },
+          {
+            "id": "player2",
+            "paddle": {
+              "x": "canvasWidth - 30",
+              "y": 0,
+              "width": 10,
+              "height": 80
+            },
+            "score": 0,
+            "color": "#2196F3"
+          }
+        ],
+        "ball": {
+          "x": 0,
+          "y": 0,
+          "radius": 8,
+          "velocityX": 0,
+          "velocityY": 0,
+          "speed": 300
+        },
+        "settings": {
+          "mode": "single",
+          "difficulty": "medium",
+          "bestOf": 5
+        },
+        "status": "stopped | running | paused | finished",
+        "highScore": 0
+      },
+      "EventPayloads": {
+        "pointScored": {
+          "player": "player1 | player2",
+          "score": 0
+        },
+        "gameOver": {
+          "winner": "player1 | player2",
+          "score": 0
+        }
+      }
+    },
+    "APIDesign": {
+      "public": {
+        "GameEngine": {
+          "methods": [
+            {
+              "name": "start",
+              "description": "Begins or resumes the game loop.",
+              "parameters": [],
+              "returns": "void"
+            },
+            {
+              "name": "pause",
+              "description": "Pauses the game loop.",
+              "parameters": [],
+              "returns": "void"
+            },
+            {
+              "name": "reset",
+              "description": "Resets all state to initial configuration.",
+              "parameters": [],
+              "returns": "void"
+            },
+            {
+              "name": "setMode",
+              "description": "Selects 'single' or 'two'.",
+              "parameters": [
+                {
+                  "name": "mode",
+                  "type": "string"
+                }
+              ],
+              "returns": "void"
+            },
+            {
+              "name": "setDifficulty",
+              "description": "Sets AI difficulty level.",
+              "parameters": [
+                {
+                  "name": "level",
+                  "type": "string"
+                }
+              ],
+              "returns": "void"
+            }
+          ]
+        },
+        "ScoreManager": {
+          "methods": [
+            {
+              "name": "increment",
+              "parameters": [
+                {
+                  "name": "playerId",
+                  "type": "string"
+                }
+              ],
+              "returns": "void"
+            },
+            {
+              "name": "reset",
+              "returns": "void"
+            },
+            {
+              "name": "getScores",
+              "returns": "{ player1: number, player2: number }"
+            }
+          ]
+        },
+        "SettingsManager": {
+          "methods": [
+            {
+              "name": "getSettings",
+              "returns": "{ mode: string, difficulty: string, bestOf: number }"
+            }
+          ]
+        }
+      },
+      "events": [
+        "pointScored",
+        "gameOver",
+        "scoreUpdated",
+        "settingsChanged"
+      ]
+    },
+    "TechnologyStack": {
+      "frontend": [
+        "HTML5 (semantic markup)",
+        "CSS3 (flexbox, media queries, custom properties)",
+        "JavaScript ES6+ modules",
+        "Canvas API (2D context)",
+        "localStorage for persistence"
+      ],
+      "buildTools": [
+        "npm (scripts only - no external libs)",
+        "Babel (transpile to ES5 for legacy browsers if needed)",
+        "Webpack / Rollup (module bundler, optional)",
+        "ESLint (linting)",
+        "Jest (unit testing)",
+        "GitHub Actions (CI/CD)"
+      ],
+      "deployment": [
+        "GitHub Pages / Netlify (static hosting)",
+        "HTTPS enforced"
+      ]
+    },
+    "DeploymentArchitecture": {
+      "hosting": "Static file hosting (GitHub Pages or Netlify)",
+      "CI": {
+        "workflow": "GitHub Actions",
+        "triggers": [
+          "push",
+          "pull_request"
+        ],
+        "jobs": [
+          {
+            "name": "Lint",
+            "steps": [
+              "install",
+              "eslint"
+            ]
+          },
+          {
+            "name": "Test",
+            "steps": [
+              "install",
+              "jest"
+            ]
+          },
+          {
+            "name": "Build",
+            "steps": [
+              "npm run build"
+            ]
+          },
+          {
+            "name": "Deploy",
+            "steps": [
+              "if: github.ref == 'refs/heads/main'",
+              "deploy to GitHub Pages"
+            ]
+          }
+        ]
+      },
+      "monitoring": "None required - purely client-side",
+      "security": "All assets served over HTTPS; no external scripts or libraries"
+    },
+    "NonFunctionalCompliance": {
+      "performance": "60 FPS via requestAnimationFrame; delta-time based physics",
+      "reliability": "Try/catch around animation loop; fallback to pause on error",
+      "usability": "Intuitive mouse/touch controls; keyboard shortcuts (Space: pause, R: reset)",
+      "accessibility": "ARIA labels on buttons; keyboard navigation; high-contrast theme option",
+      "security": "No external dependencies; CSP header recommended for production",
+      "maintainability": "ES6 module structure, JSDoc comments, README, CI pipeline"
+    },
+    "TestingStrategy": {
+      "unitTests": [
+        "PhysicsEngine.updateBall",
+        "PhysicsEngine.handleCollision",
+        "ScoreManager.increment",
+        "AI.update"
+      ],
+      "integrationTests": [
+        "Full game cycle: serve -> score -> reset",
+        "Responsive resizing",
+        "Touch input handling"
+      ],
+      "coverageGoal": ">=80% on core logic",
+      "testRunner": "Jest",
+      "mocking": "Mock canvas context for unit tests"
+    }
+  },
+  "specifications": {
+    "ProjectOverview": {
+      "title": "JavaScript Ping Pong Game",
+      "description": "A browser\u2011based, real\u2011time ping pong (table tennis) game built with HTML5 Canvas and vanilla JavaScript. The game supports both single\u2011player (against AI) and two\u2011player (local) modes, includes physics, scoring, and a simple UI. It is designed to be lightweight, responsive, and easily extensible.",
+      "targetPlatforms": [
+        "Desktop browsers (Chrome, Firefox, Safari, Edge)",
+        "Mobile browsers (iOS Safari, Android Chrome)"
+      ],
+      "technologyStack": [
+        "HTML5",
+        "CSS3",
+        "JavaScript ES6+",
+        "Canvas API"
+      ],
+      "deliverables": [
+        "Fully functional web page with game canvas",
+        "Responsive UI for mobile and desktop",
+        "Source code repository (Git)",
+        "Documentation (README, API reference, test plan)",
+        "Unit and integration tests"
+      ],
+      "timeline": "6 weeks (Planning, Development, QA, Deployment)",
+      "budget": "Not applicable \u2013 open\u2011source project"
+    },
+    "UserStories": [
+      {
+        "id": "US1",
+        "role": "Player",
+        "description": "As a player, I want to control a paddle with my mouse or touch so that I can hit the ball.",
+        "acceptanceCriteria": [
+          "Paddle follows cursor or touch position horizontally.",
+          "Movement is limited to the player's half of the court.",
+          "Paddle reacts instantly (no noticeable lag)."
+        ]
+      },
+      {
+        "id": "US2",
+        "role": "Player",
+        "description": "As a player, I want to play against an AI opponent so that I can practice without a second player.",
+        "acceptanceCriteria": [
+          "AI paddle moves automatically with a realistic reaction time.",
+          "Difficulty levels (Easy, Medium, Hard) adjust AI speed and anticipation."
+        ]
+      },
+      {
+        "id": "US3",
+        "role": "Player",
+        "description": "As a player, I want to play with a friend on the same device so that we can compete locally.",
+        "acceptanceCriteria": [
+          "Two paddles controlled by separate input methods (mouse or keyboard).",
+          "Each paddle is color\u2011coded and labeled."
+        ]
+      },
+      {
+        "id": "US4",
+        "role": "Player",
+        "description": "As a player, I want to see my score so that I know who is winning.",
+        "acceptanceCriteria": [
+          "Current score is displayed prominently above the game area.",
+          "Score updates instantly after a point is scored."
+        ]
+      },
+      {
+        "id": "US5",
+        "role": "Player",
+        "description": "As a player, I want to start, pause, and reset the game so that I can control the flow.",
+        "acceptanceCriteria": [
+          "Start button initiates a new game.",
+          "Pause button freezes ball and paddle movement.",
+          "Reset button clears score and returns to initial state."
+        ]
+      },
+      {
+        "id": "US6",
+        "role": "Player",
+        "description": "As a player, I want the game to be responsive so that it works on both desktop and mobile.",
+        "acceptanceCriteria": [
+          "Canvas resizes to fit screen while maintaining aspect ratio.",
+          "Touch controls work on mobile devices."
+        ]
+      },
+      {
+        "id": "US7",
+        "role": "Developer",
+        "description": "As a developer, I want the code to be modular and testable so that I can maintain and extend it.",
+        "acceptanceCriteria": [
+          "Game logic is separated into modules (Game, Paddle, Ball, AI, UI).",
+          "Unit tests cover core physics and scoring logic."
+        ]
+      }
+    ],
+    "FunctionalRequirements": [
+      {
+        "id": "FR1",
+        "description": "Render game elements (paddles, ball, net, scoreboard) on an HTML5 canvas."
+      },
+      {
+        "id": "FR2",
+        "description": "Implement ball physics: velocity, angle of deflection based on paddle contact point."
+      },
+      {
+        "id": "FR3",
+        "description": "Detect collisions between ball and paddles, walls, and net."
+      },
+      {
+        "id": "FR4",
+        "description": "Update scores when the ball passes a paddle."
+      },
+      {
+        "id": "FR5",
+        "description": "Provide three difficulty settings for AI: Easy (slow, predictable), Medium (moderate speed), Hard (fast, anticipatory)."
+      },
+      {
+        "id": "FR6",
+        "description": "Allow the user to select game mode: Single\u2011player or Two\u2011player."
+      },
+      {
+        "id": "FR7",
+        "description": "Implement start, pause, and reset controls via buttons and keyboard shortcuts."
+      },
+      {
+        "id": "FR8",
+        "description": "Persist high score in localStorage to display a leaderboard."
+      },
+      {
+        "id": "FR9",
+        "description": "Provide visual feedback: ball flashes when speed increases, paddle changes color when hit."
+      },
+      {
+        "id": "FR10",
+        "description": "Implement responsive design: canvas resizes with window, controls adapt to touch."
+      }
+    ],
+    "NonFunctionalRequirements": [
+      {
+        "id": "NFR1",
+        "description": "Performance: Frame rate of at least 60 FPS on modern browsers."
+      },
+      {
+        "id": "NFR2",
+        "description": "Reliability: Game should recover gracefully from errors (e.g., lost animation frame)."
+      },
+      {
+        "id": "NFR3",
+        "description": "Usability: Controls should be intuitive with minimal learning curve."
+      },
+      {
+        "id": "NFR4",
+        "description": "Accessibility: Keyboard navigation support and ARIA labels for controls."
+      },
+      {
+        "id": "NFR5",
+        "description": "Security: No external dependencies that could introduce vulnerabilities."
+      },
+      {
+        "id": "NFR6",
+        "description": "Maintainability: Codebase follows ES6 module conventions, with clear documentation."
+      }
+    ],
+    "BusinessRules": [
+      {
+        "id": "BR1",
+        "rule": "A point is awarded to a player when the ball passes beyond the opponent's paddle (i.e., crosses the left or right boundary)."
+      },
+      {
+        "id": "BR2",
+        "rule": "The game ends when a player reaches 11 points, unless 'best of' is specified in settings."
+      },
+      {
+        "id": "BR3",
+        "rule": "The ball starts at the center with a random initial direction each serve."
+      },
+      {
+        "id": "BR4",
+        "rule": "If the ball touches the net, it is considered a fault and the point is awarded to the opponent."
+      },
+      {
+        "id": "BR5",
+        "rule": "The AI paddle cannot move beyond the vertical bounds of the canvas."
+      },
+      {
+        "id": "BR6",
+        "rule": "Score display must show both players' scores side by side."
+      }
+    ],
+    "SuccessCriteria": [
+      {
+        "id": "SC1",
+        "description": "The game runs smoothly at 60 FPS on a mid\u2011range laptop and a modern smartphone."
+      },
+      {
+        "id": "SC2",
+        "description": "All user stories are fully implemented and pass acceptance tests."
+      },
+      {
+        "id": "SC3",
+        "description": "Unit tests cover >80% of the core logic (ball movement, collision detection, scoring)."
+      },
+      {
+        "id": "SC4",
+        "description": "The UI is responsive and works on Chrome, Firefox, Safari, Edge, iOS Safari, and Android Chrome."
+      },
+      {
+        "id": "SC5",
+        "description": "The final product is documented (README, code comments, API reference) and the repository contains a CI pipeline that runs tests on every commit."
+      }
+    ]
+  },
+  "ComponentArchitecture": {
+    "modules": [
+      {
+        "name": "GameEngine",
+        "responsibilities": [
+          "Orchestrates game loop",
+          "Manages state transitions (start, pause, reset)",
+          "Coordinates physics, AI, and rendering each frame"
+        ],
+        "publicApi": [
+          "start()",
+          "pause()",
+          "reset()",
+          "setMode(mode)",
+          "setDifficulty(level)"
+        ]
+      },
+      {
+        "name": "CanvasRenderer",
+        "responsibilities": [
+          "Draws paddles, ball, net, scoreboard",
+          "Handles responsive resizing",
+          "Applies visual feedback (flashing ball, paddle color change)"
+        ],
+        "publicApi": [
+          "render(state)",
+          "resize(width, height)"
+        ]
+      },
+      {
+        "name": "PhysicsEngine",
+        "responsibilities": [
+          "Calculates ball velocity and angle",
+          "Detects collisions (paddle, walls, net)",
+          "Applies friction and speed scaling"
+        ],
+        "publicApi": [
+          "updateBall(state, deltaTime)",
+          "handleCollision(state)"
+        ]
+      },
+      {
+        "name": "Paddle",
+        "responsibilities": [
+          "Encapsulates paddle position, size, and movement constraints",
+          "Exposes methods to update based on input or AI"
+        ],
+        "publicApi": [
+          "moveTo(y)",
+          "clamp()",
+          "getBounds()"
+        ]
+      },
+      {
+        "name": "Ball",
+        "responsibilities": [
+          "Encapsulates ball position, velocity, radius",
+          "Provides methods to reset and update position"
+        ],
+        "publicApi": [
+          "reset()",
+          "update(deltaTime)"
+        ]
+      },
+      {
+        "name": "AI",
+        "responsibilities": [
+          "Computes paddle movement based on ball position and difficulty",
+          "Implements reaction delay and anticipation"
+        ],
+        "publicApi": [
+          "update(state)",
+          "setDifficulty(level)"
+        ]
+      },
+      {
+        "name": "InputHandler",
+        "responsibilities": [
+          "Maps mouse, touch, and keyboard events to paddle movement",
+          "Ensures separation of control for each player"
+        ],
+        "publicApi": [
+          "init()",
+          "destroy()",
+          "getPlayerInput()"
+        ]
+      },
+      {
+        "name": "ScoreManager",
+        "responsibilities": [
+          "Tracks current score and high score",
+          "Persists high score to localStorage",
+          "Notifies UI on score changes"
+        ],
+        "publicApi": [
+          "increment(player)",
+          "reset()",
+          "getScores()",
+          "loadHighScore()",
+          "saveHighScore()"
+        ]
+      },
+      {
+        "name": "SettingsManager",
+        "responsibilities": [
+          "Holds game mode, difficulty, best-of settings",
+          "Provides UI for changing settings"
+        ],
+        "publicApi": [
+          "setMode()",
+          "setDifficulty()",
+          "getSettings()"
+        ]
+      },
+      {
+        "name": "EventBus",
+        "responsibilities": [
+          "Facilitates decoupled communication between modules",
+          "Publishes events such as 'pointScored', 'gameOver'"
+        ],
+        "publicApi": [
+          "on(event, handler)",
+          "emit(event, payload)"
+        ]
+      },
+      {
+        "name": "Utils",
+        "responsibilities": [
+          "Common helper functions (random angle, clamp, debounce, etc.)"
+        ],
+        "publicApi": [
+          "randomAngle()",
+          "clamp(value, min, max)",
+          "debounce(fn, delay)"
+        ]
+      }
+    ]
+  },
+  "UserStories": [
+    {
+      "id": "US1",
+      "role": "Player",
+      "description": "As a player, I want to control a paddle with my mouse or touch so that I can hit the ball.",
+      "acceptanceCriteria": [
+        "Paddle follows cursor or touch position horizontally.",
+        "Movement is limited to the player's half of the court.",
+        "Paddle reacts instantly (no noticeable lag)."
+      ]
+    },
+    {
+      "id": "US2",
+      "role": "Player",
+      "description": "As a player, I want to play against an AI opponent so that I can practice without a second player.",
+      "acceptanceCriteria": [
+        "AI paddle moves automatically with a realistic reaction time.",
+        "Difficulty levels (Easy, Medium, Hard) adjust AI speed and anticipation."
+      ]
+    },
+    {
+      "id": "US3",
+      "role": "Player",
+      "description": "As a player, I want to play with a friend on the same device so that we can compete locally.",
+      "acceptanceCriteria": [
+        "Two paddles controlled by separate input methods (mouse or keyboard).",
+        "Each paddle is color\u2011coded and labeled."
+      ]
+    },
+    {
+      "id": "US4",
+      "role": "Player",
+      "description": "As a player, I want to see my score so that I know who is winning.",
+      "acceptanceCriteria": [
+        "Current score is displayed prominently above the game area.",
+        "Score updates instantly after a point is scored."
+      ]
+    },
+    {
+      "id": "US5",
+      "role": "Player",
+      "description": "As a player, I want to start, pause, and reset the game so that I can control the flow.",
+      "acceptanceCriteria": [
+        "Start button initiates a new game.",
+        "Pause button freezes ball and paddle movement.",
+        "Reset button clears score and returns to initial state."
+      ]
+    },
+    {
+      "id": "US6",
+      "role": "Player",
+      "description": "As a player, I want the game to be responsive so that it works on both desktop and mobile.",
+      "acceptanceCriteria": [
+        "Canvas resizes to fit screen while maintaining aspect ratio.",
+        "Touch controls work on mobile devices."
+      ]
+    },
+    {
+      "id": "US7",
+      "role": "Developer",
+      "description": "As a developer, I want the code to be modular and testable so that I can maintain and extend it.",
+      "acceptanceCriteria": [
+        "Game logic is separated into modules (Game, Paddle, Ball, AI, UI).",
+        "Unit tests cover core physics and scoring logic."
+      ]
+    }
+  ],
+  "FunctionalRequirements": [
+    {
+      "id": "FR1",
+      "description": "Render game elements (paddles, ball, net, scoreboard) on an HTML5 canvas."
+    },
+    {
+      "id": "FR2",
+      "description": "Implement ball physics: velocity, angle of deflection based on paddle contact point."
+    },
+    {
+      "id": "FR3",
+      "description": "Detect collisions between ball and paddles, walls, and net."
+    },
+    {
+      "id": "FR4",
+      "description": "Update scores when the ball passes a paddle."
+    },
+    {
+      "id": "FR5",
+      "description": "Provide three difficulty settings for AI: Easy (slow, predictable), Medium (moderate speed), Hard (fast, anticipatory)."
+    },
+    {
+      "id": "FR6",
+      "description": "Allow the user to select game mode: Single\u2011player or Two\u2011player."
+    },
+    {
+      "id": "FR7",
+      "description": "Implement start, pause, and reset controls via buttons and keyboard shortcuts."
+    },
+    {
+      "id": "FR8",
+      "description": "Persist high score in localStorage to display a leaderboard."
+    },
+    {
+      "id": "FR9",
+      "description": "Provide visual feedback: ball flashes when speed increases, paddle changes color when hit."
+    },
+    {
+      "id": "FR10",
+      "description": "Implement responsive design: canvas resizes with window, controls adapt to touch."
+    }
+  ],
+  "TestCases": []
+}

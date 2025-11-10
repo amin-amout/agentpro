@@ -1,17 +1,8 @@
 {
   "status": "success",
   "files": [
-    "projects/my_project/developer/src/utils.js",
-    "projects/my_project/developer/src/eventBus.js",
-    "projects/my_project/developer/src/paddle.js",
-    "projects/my_project/developer/src/ball.js",
-    "projects/my_project/developer/src/physicsEngine.js",
-    "projects/my_project/developer/src/ai.js",
-    "projects/my_project/developer/src/inputHandler.js",
-    "projects/my_project/developer/src/scoreManager.js",
-    "projects/my_project/developer/src/settingsManager.js",
-    "projects/my_project/developer/src/canvasRenderer.js",
-    "projects/my_project/developer/src/gameEngine.js"
+    "projects/my_project/developer/index.html",
+    "projects/my_project/developer/src/utils.js"
   ],
-  "file_count": 11
+  "file_count": 2
 }

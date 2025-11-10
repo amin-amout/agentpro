@@ -1,10 +1,10 @@
 """Developer implementation service."""
+import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 import json
 import re
 import aiohttp
-from pathlib import Path
 from .base_service import BaseAgentService
 
 
@@ -15,212 +15,186 @@ class DeveloperService(BaseAgentService):
         try:
             return prompt_path.read_text()
         except FileNotFoundError:
-            # Default prompt if file not found
             return (
                 "You are an expert Software Developer. Generate implementation files based on "
-                "the provided architecture and specifications. For each file use the format:\n\n"
-                "### File: path/to/file.ext\n"
-                "```\n"
-                "file content\n"
-                "```\n\n"
+                "the provided architecture and specifications.\n"
                 "Generate complete, production-ready code files following best practices. "
                 "Include proper error handling, documentation, and tests where appropriate."
             )
+
     def get_project_path(self) -> Path:
         """Return the project base path for the current project."""
         return Path("projects") / self.project_name
+
     @property
     def agent_type(self) -> str:
         return "developer"
 
-    def clean_json_string(self, text: str) -> str:
-        """Clean a string and balance braces."""
-        if not isinstance(text, str):
-            return text
+    def is_likely_truncated(self, text: str) -> bool:
+        """Heuristic checks to detect if an LLM response was truncated."""
+        if not text or not isinstance(text, str):
+            return False
 
-        # Remove code fences and trim
-        text = text.replace('```json', '').replace('```', '')
-        text = text.strip()
+        # Unclosed fenced code block
+        if text.count('```') % 2 != 0:
+            return True
 
-        # Basic escape fixes
-        text = text.replace('\\"', '"').replace("\\'", "'")
+        s = text.rstrip()
+        if not s:
+            return False
 
-        # Balance braces
-        open_count = text.count('{')
-        close_count = text.count('}')
-        if open_count > close_count:
-            text = text + ('}' * (open_count - close_count))
-
-        return text
-
-    async def parse_input(self, input_data: Union[str, Dict]) -> Optional[Dict]:
-        """Parse input from string, file or URL."""
-        if isinstance(input_data, dict):
-            return input_data
-
-        if not isinstance(input_data, str):
-            return None
-
-        # Try direct JSON
-        try:
-            return json.loads(input_data)
-        except json.JSONDecodeError:
+        last_char = s[-1]
+        if last_char in ('\n', '}', ']', '>', ';', '"', "'", ')'):
             pass
+        else:
+            return True
 
-        # Try URL
-        if input_data.startswith(('http://', 'https://')):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(input_data) as response:
-                    return await response.json()
+        # Unbalanced braces
+        if text.count('{') > text.count('}'):
+            return True
 
-        # Try file path
-        try:
-            p = Path(input_data)
-            if p.is_file():
-                return json.loads(p.read_text())
-        except Exception:
-            pass
+        return False
 
-        return None
+    async def _recover_truncated_response(self, initial_text: str, base_messages: list, max_attempts: int = 2) -> str:
+        """Attempt to recover a truncated LLM response by asking for continuation."""
+        full = initial_text
+        for attempt in range(max_attempts):
+            if not self.is_likely_truncated(full):
+                break
 
-    def extract_json(self, content: str) -> Optional[Dict]:
-        """Extract JSON object from a text blob."""
-        if not isinstance(content, str):
-            return None
-
-        clean = self.clean_json_string(content)
-
-        # Try full parse
-        try:
-            return json.loads(clean)
-        except json.JSONDecodeError:
-            pass
-
-        # Try json code blocks
-        blocks = re.findall(r'```json\\s*(.*?)\\s*```', content, re.DOTALL)
-        for b in blocks:
+            follow_up = "Continue the previous response from where it stopped. Only provide the continuation."
+            follow_messages = base_messages + [{"role": "user", "content": follow_up}]
             try:
-                return json.loads(self.clean_json_string(b))
-            except json.JSONDecodeError:
-                continue
+                resp = await self._call_llm_api(follow_messages)
+                addition = resp.get("choices", [])[0].get("message", {}).get("content", "")
+                if not addition:
+                    break
+                full = full + "\n" + addition
+                await asyncio.sleep(1)  # Delay between continuation requests
+            except Exception:
+                break
 
-        # Try to find the largest JSON object substring
-        objs = re.findall(r'\\{(?:[^{}]|(?:\\{[^{}]*\\}))*\\}', content, re.DOTALL)
-        max_obj = None
-        max_len = 0
-        for o in objs:
-            try:
-                parsed = json.loads(o)
-                if len(o) > max_len:
-                    max_len = len(o)
-                    max_obj = parsed
-            except json.JSONDecodeError:
-                continue
-
-        return max_obj
-
-    def save_implementation_files(self, implementation: Dict[str, str], project_path: Path) -> List[str]:
-        """Save implementation files to the project directory."""
-        saved_files = []
-        developer_path = project_path / "developer"
-        developer_path.mkdir(exist_ok=True)
-
-        for filename, content in implementation.items():
-            # Create subdirectories if needed
-            file_path = developer_path / filename
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Write the file
-            file_path.write_text(content)
-            saved_files.append(str(file_path))
-
-        return saved_files
+        return full
 
     async def process(self, input_data: Union[str, Dict]) -> Dict[str, Any]:
-        """Process input and call LLM to generate implementation files."""
+        """Process input and generate implementation files (per-file approach)."""
         try:
-            # Parse input data
-            parsed_input = await self.parse_input(input_data)
-            if not parsed_input:
-                return {"status": "error", "error": "Could not parse input data"}
+            # Parse input
+            if isinstance(input_data, str):
+                try:
+                    parsed_input = json.loads(input_data)
+                except json.JSONDecodeError:
+                    p = Path(input_data)
+                    if p.is_file():
+                        parsed_input = json.loads(p.read_text())
+                    else:
+                        return {"status": "error", "error": "Could not parse input"}
+            else:
+                parsed_input = input_data
 
-            # Get architecture and specifications
-            messages = [
-                {
-                    "role": "system", 
-                    "content": self.load_prompt("developer")
-                },
-                {
-                    "role": "user", 
-                    "content": (
-                        "Generate the implementation files based on the following architecture and specifications. "
-                        "Format each file with:\n\n"
-                        "### File: path/to/file.ext\n"
-                        "```\n"
-                        "file content\n"
-                        "```\n\n"
-                        f"Architecture: {json.dumps(parsed_input.get('architecture', {}))}\n"
-                        f"Specifications: {json.dumps(parsed_input.get('specifications', {}))}"
-                    )
-                }
+            if not parsed_input:
+                return {"status": "error", "error": "No input data"}
+
+            # Extract modules from architecture
+            project_path = self.get_project_path()
+            modules = []
+            ca = parsed_input.get('ComponentArchitecture') or {}
+            if isinstance(ca, dict):
+                modules = ca.get('modules', [])
+            elif isinstance(ca, list):
+                modules = ca
+
+            # Define files to generate
+            file_specs = [
+                {"path": "index.html", "role": "entry_html"},
+                {"path": "styles.css", "role": "styles"},
+                {"path": "main.js", "role": "entry_js"}
             ]
 
-            # Call LLM to generate implementation
-            response = await self._call_llm_api(messages)
-            response_text = response["choices"][0]["message"]["content"]
-            
-            # Parse the files from the response
-            files = []
-            current_file = None
-            content_lines = []
-            
-            for line in response_text.split('\n'):
-                if line.startswith('### File: '):
-                    # Save previous file if exists
-                    if current_file and content_lines:
-                        files.append({
-                            'path': current_file,
-                            'content': '\n'.join(content_lines)
-                        })
-                    # Start new file
-                    current_file = line[9:].strip()
-                    content_lines = []
-                elif line.startswith('```'):
+            # Add module files
+            for m in modules:
+                name = m.get('name') if isinstance(m, dict) else str(m)
+                if not name:
                     continue
-                elif current_file:
-                    content_lines.append(line)
-            
-            # Save last file
-            if current_file and content_lines:
-                files.append({
-                    'path': current_file,
-                    'content': '\n'.join(content_lines)
-                })
+                fname = ''.join(ch for ch in name if ch.isalnum())
+                if not fname:
+                    continue
+                fname = fname[0].lower() + fname[1:] if len(fname) > 1 else fname.lower()
+                file_specs.append({"path": f"src/{fname}.js", "module": m})
 
-            if not files:
-                return {
-                    "status": "error",
-                    "error": "No valid files found in response",
-                    "raw_content": response_text
-                }
-
-            # Save the files
-            project_path = self.get_project_path()
+            system_prompt = self.load_prompt("developer")
             saved_files = []
-            
-            for file_info in files:
-                file_path = project_path / "developer" / file_info['path']
+
+            # Generate files one by one
+            for idx, spec in enumerate(file_specs):
+                target = spec['path']
+                user_content = (
+                    f"Generate the COMPLETE content for '{target}'.\n"
+                    "Return ONLY the file content, no markdown or JSON.\n\n"
+                    f"Architecture: {json.dumps(parsed_input.get('architecture', {}))}\n"
+                    f"Specifications: {json.dumps(parsed_input.get('specifications', {}))}\n"
+                )
+                if spec.get('module'):
+                    user_content += "Module: " + json.dumps(spec['module']) + "\n"
+
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content}
+                ]
+
+                # Add delay before each call (except first)
+                # Exponential backoff: increase delay progressively
+                if idx > 0:
+                    delay = min(15, 5 + (idx * 2))  # 5s, 7s, 9s, ... up to 15s
+                    await asyncio.sleep(delay)
+
+                try:
+                    resp = await self._call_llm_api(messages)
+                    text = resp.get('choices', [])[0].get('message', {}).get('content', '')
+                except Exception as e:
+                    print(f"Error generating {target}: {e}")
+                    continue
+
+                if not text:
+                    continue
+
+                # Try to recover if truncated
+                text = await self._recover_truncated_response(text, messages)
+
+                # Strip fences
+                stripped = text.strip()
+                if stripped.startswith('```') and stripped.endswith('```'):
+                    parts = stripped.split('\n')
+                    if len(parts) >= 3:
+                        stripped = '\n'.join(parts[1:-1])
+
+                # Final check + one more continuation if needed
+                if self.is_likely_truncated(stripped):
+                    follow = f"File '{target}' is truncated. Return complete content only."
+                    try:
+                        await asyncio.sleep(1)
+                        resp2 = await self._call_llm_api(messages + [{"role": "user", "content": follow}])
+                        more = resp2.get('choices', [])[0].get('message', {}).get('content', '')
+                        if more:
+                            mstrip = more.strip()
+                            if mstrip.startswith('```') and mstrip.endswith('```'):
+                                parts = mstrip.split('\n')
+                                if len(parts) >= 3:
+                                    mstrip = '\n'.join(parts[1:-1])
+                            stripped = stripped + '\n' + mstrip
+                    except Exception:
+                        pass
+
+                # Save file
+                file_path = project_path / 'developer' / target
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_text(file_info['content'])
+                file_path.write_text(stripped)
                 saved_files.append(str(file_path))
 
-            return {
-                "status": "success",
-                "files": saved_files,
-                "file_count": len(saved_files)
-            }
+            if not saved_files:
+                return {"status": "error", "error": "No files generated"}
+
+            return {"status": "success", "files": saved_files, "file_count": len(saved_files)}
+
         except Exception as e:
-            return {
-                "status": "error", 
-                "error": str(e)
-            }
+            return {"status": "error", "error": str(e)}

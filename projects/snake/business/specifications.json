@@ -1,0 +1,190 @@
+{
+  "projectOverview": {
+    "name": "Web Snake Game",
+    "description": "A lightweight, browser\u2011only Snake game implemented with plain HTML, CSS, and JavaScript. The game runs in a single page, requires no external libraries or frameworks, and supports basic gameplay: moving a snake, eating food, growing, and detecting collisions.",
+    "platform": "Web browsers (desktop & mobile)",
+    "deliverables": [
+      "index.html",
+      "styles.css",
+      "game.js",
+      "README.md"
+    ],
+    "timeline": {
+      "startDate": "2025-11-12",
+      "completionDate": "2025-11-20",
+      "milestones": [
+        "UI prototype \u2013 2025\u201111\u201113",
+        "Core game logic \u2013 2025\u201111\u201115",
+        "Testing & polish \u2013 2025\u201111\u201118"
+      ]
+    }
+  },
+  "userStories": [
+    {
+      "id": "US01",
+      "title": "Start the game",
+      "description": "As a player, I want to start a new game session so that I can play immediately.",
+      "acceptanceCriteria": [
+        "A Start button is visible on the landing screen.",
+        "Pressing the Start button clears any previous state and shows the game canvas.",
+        "The first snake segment is positioned at the center of the canvas."
+      ]
+    },
+    {
+      "id": "US02",
+      "title": "Control the snake",
+      "description": "As a player, I want to move the snake using arrow keys (or swipe on mobile) so that I can navigate the play area.",
+      "acceptanceCriteria": [
+        "Arrow keys change the snake\u2019s direction instantly.",
+        "Swipe gestures on touch devices produce the same directional changes.",
+        "The snake cannot reverse direction directly (e.g., moving right \u2192 left immediately)."
+      ]
+    },
+    {
+      "id": "US03",
+      "title": "Eat food and grow",
+      "description": "As a player, I want the snake to grow when it eats food and my score to increase so that I can track my progress.",
+      "acceptanceCriteria": [
+        "Food appears at random positions not occupied by the snake.",
+        "When the snake\u2019s head reaches food, the snake grows by one segment and a new food item spawns.",
+        "The score increments by 1 for each food eaten and is displayed on screen."
+      ]
+    },
+    {
+      "id": "US04",
+      "title": "Detect collisions and end the game",
+      "description": "As a player, I want the game to end when the snake collides with walls or itself so that I know the session is over.",
+      "acceptanceCriteria": [
+        "Collision with the canvas boundary triggers a Game Over state.",
+        "Collision with any part of the snake\u2019s body triggers a Game Over state.",
+        "A Game Over message is displayed with the final score."
+      ]
+    },
+    {
+      "id": "US05",
+      "title": "Restart after game over",
+      "description": "As a player, I want to restart the game after a Game Over so that I can try again.",
+      "acceptanceCriteria": [
+        "A Restart button appears in the Game Over screen.",
+        "Pressing Restart resets the snake, score, and food to initial state."
+      ]
+    },
+    {
+      "id": "US06",
+      "title": "Responsive layout",
+      "description": "As a player on mobile devices, I want the game to adapt to screen size so that I can play comfortably.",
+      "acceptanceCriteria": [
+        "Canvas scales to fit the viewport while maintaining a square aspect ratio.",
+        "Controls (arrow keys or swipe) work on touch devices."
+      ]
+    }
+  ],
+  "functionalRequirements": [
+    {
+      "id": "FR01",
+      "description": "Render a square game area (canvas) of configurable size (default 400x400px)."
+    },
+    {
+      "id": "FR02",
+      "description": "Implement a game loop using `requestAnimationFrame` that updates the snake\u2019s position at a constant speed (e.g., 10 frames per second)."
+    },
+    {
+      "id": "FR03",
+      "description": "Generate food at random grid positions ensuring it does not overlap the snake body."
+    },
+    {
+      "id": "FR04",
+      "description": "Handle keyboard input (Arrow keys) and touch input (swipe) to change snake direction."
+    },
+    {
+      "id": "FR05",
+      "description": "Detect collision with canvas boundaries and snake body segments."
+    },
+    {
+      "id": "FR06",
+      "description": "Maintain a score counter that increments on food consumption."
+    },
+    {
+      "id": "FR07",
+      "description": "Display current score in a UI element."
+    },
+    {
+      "id": "FR08",
+      "description": "Show Game Over overlay with final score and Restart button."
+    },
+    {
+      "id": "FR09",
+      "description": "Reset all game state when Restart is pressed."
+    },
+    {
+      "id": "FR10",
+      "description": "Ensure the entire codebase is written in plain HTML, CSS, and vanilla JavaScript (no external libraries)."
+    }
+  ],
+  "nonFunctionalRequirements": [
+    {
+      "id": "NFR01",
+      "description": "Performance: The game must run smoothly at 60 FPS on modern browsers."
+    },
+    {
+      "id": "NFR02",
+      "description": "Compatibility: Must support latest versions of Chrome, Firefox, Safari, Edge, and mobile browsers (iOS Safari, Android Chrome)."
+    },
+    {
+      "id": "NFR03",
+      "description": "Accessibility: Keyboard controls must be operable with standard arrow keys and screen reader focus must be on the canvas during gameplay."
+    },
+    {
+      "id": "NFR04",
+      "description": "Maintainability: All code should be modular, with clear separation between game logic, rendering, and input handling."
+    },
+    {
+      "id": "NFR05",
+      "description": "Security: The code must not expose any external network requests or use unsafe eval patterns."
+    }
+  ],
+  "businessRules": [
+    {
+      "id": "BR01",
+      "description": "The snake\u2019s initial length is 3 segments."
+    },
+    {
+      "id": "BR02",
+      "description": "The game board is divided into a grid (e.g., 20x20 cells); snake movement occurs cell by cell."
+    },
+    {
+      "id": "BR03",
+      "description": "Food appears only in empty cells; no two food items can exist simultaneously."
+    },
+    {
+      "id": "BR04",
+      "description": "The snake cannot reverse direction (e.g., from left to right) in a single frame."
+    },
+    {
+      "id": "BR05",
+      "description": "Score is displayed as a numeric value and resets to 0 on each new game."
+    }
+  ],
+  "successCriteria": [
+    {
+      "id": "SC01",
+      "description": "The game loads in under 2 seconds on a standard broadband connection."
+    },
+    {
+      "id": "SC02",
+      "description": "All user stories pass acceptance tests (see criteria above)."
+    },
+    {
+      "id": "SC03",
+      "description": "No console errors or warnings appear during gameplay."
+    },
+    {
+      "id": "SC04",
+      "description": "The game runs without lag or stutter on at least 50% of devices tested (desktop and mobile)."
+    },
+    {
+      "id": "SC05",
+      "description": "Code passes linting with ESLint (standard configuration) and is documented with inline comments."
+    }
+  ]
+}
