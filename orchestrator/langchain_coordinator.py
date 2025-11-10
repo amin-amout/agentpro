@@ -85,18 +85,14 @@ class AgentCoordinator:
         """Run the complete agent workflow using LangChain coordination."""
         try:
             # Create the prompt template
+            # Load coordinator system prompt from shared prompts
+            prompt_path = Path(__file__).parent.parent / 'services' / 'prompts' / 'coordinator.txt'
+            if not prompt_path.exists():
+                raise FileNotFoundError(f"Missing coordinator prompt: {prompt_path}")
+            coordinator_prompt = prompt_path.read_text()
+
             template = ChatPromptTemplate.from_messages([
-                ("system", """You are a project coordinator managing software development.
-                When you receive a project request:
-                1. Call BusinessAnalysis to understand requirements
-                2. Call ArchitectureDesign for system design
-                3. Call Implementation for code writing
-                4. Call QualityAssurance for testing
-                5. Call CodeAudit for review
-                6. Call Documentation for docs
-                
-                Each tool will process its part and you'll combine the results into a complete project plan.
-                Return the complete project plan as plain text with markdown formatting."""),
+                ("system", coordinator_prompt),
                 ("human", "{input}"),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ])

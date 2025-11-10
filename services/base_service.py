@@ -70,12 +70,32 @@ class BaseAgentService(ABC):
         if not api_key:
             raise ValueError("LLM_API_KEY environment variable not found")
             
+        # Prefer environment variables when a per-service config file is not provided.
+        api_url = os.getenv("LLM_API_URL")
+        model = os.getenv("DEFAULT_MODEL")
+        temperature = os.getenv("TEMPERATURE")
+        max_tokens = os.getenv("MAX_TOKENS")
+
+        # Require explicit configuration to avoid embedding defaults in code.
+        missing = []
+        if not api_key:
+            missing.append('LLM_API_KEY')
+        if not api_url:
+            missing.append('LLM_API_URL')
+        if not model:
+            missing.append('DEFAULT_MODEL')
+
+        if missing:
+            raise ValueError(
+                f"Missing required LLM configuration in environment or config file: {', '.join(missing)}"
+            )
+
         return {
-            "api_url": os.getenv("LLM_API_URL", "https://api.groq.com/openai/v1/chat/completions"),
+            "api_url": api_url,
             "api_key": api_key,
-            "model": os.getenv("DEFAULT_MODEL", "openai/gpt-oss-safeguard-20b"),
-            "temperature": float(os.getenv("TEMPERATURE", "0.7")),
-            "max_tokens": int(os.getenv("MAX_TOKENS", "4096")),
+            "model": model,
+            "temperature": float(temperature) if temperature is not None else 0.7,
+            "max_tokens": int(max_tokens) if max_tokens is not None else 4096,
         }
 
     async def _call_llm_api(self, messages: list) -> Dict[str, Any]:

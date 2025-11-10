@@ -11,27 +11,18 @@ class DocumentationService(BaseAgentService):
 
     async def process(self, input_data: str) -> Dict[str, Any]:
         """Generate project documentation."""
+        # Load external prompt for documentation
+        prompt_path = Path(__file__).parent / 'prompts' / 'documentation.txt'
+        if not prompt_path.exists():
+            raise FileNotFoundError(f"Missing prompt file: {prompt_path}")
+        system_prompt = prompt_path.read_text()
+
         messages = [
-            {
-                "role": "system",
-                "content": """You are a Technical Writer specialized in software documentation.
-                Create complete project documentation including:
-                1. Project Overview
-                2. Setup Guide
-                3. User Guide
-                4. API Documentation
-                5. Development Guide
-                6. Deployment Guide
-                
-                Format the output as structured JSON with markdown content."""
-            },
-            {
-                "role": "user",
-                "content": f"Create complete project documentation for: {input_data}"
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Create complete project documentation for: {input_data}"}
         ]
-        
-        response = self._call_llm_api(messages)
+
+        response = await self._call_llm_api(messages)
         content = response["choices"][0]["message"]["content"]
         
         try:

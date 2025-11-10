@@ -126,24 +126,15 @@ class ArchitectureService(BaseAgentService):
                     # If all else fails, treat as raw string
                     requirements = input_data
 
+        # Load system prompt from external file to avoid embedding raw prompt text in code
+        prompt_path = Path(__file__).parent / 'prompts' / 'architecture.txt'
+        if not prompt_path.exists():
+            raise FileNotFoundError(f"Missing prompt file: {prompt_path}")
+        system_prompt = prompt_path.read_text()
+
         messages = [
-            {
-                "role": "system",
-                "content": """You are a Software Architect specialized in system design.
-                Create a complete architecture specification including:
-                1. System Overview
-                2. Component Architecture
-                3. Data Model
-                4. API Design
-                5. Technology Stack
-                6. Deployment Architecture
-                
-                Format the output as structured JSON."""
-            },
-            {
-                "role": "user",
-                "content": f"Design a complete system architecture for these requirements: {requirements}"
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Design a complete system architecture for these requirements: {requirements}"}
         ]
         
         response = await self._call_llm_api(messages)

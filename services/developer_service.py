@@ -12,15 +12,10 @@ class DeveloperService(BaseAgentService):
     def load_prompt(self, prompt_name: str) -> str:
         """Load a prompt from the prompts directory."""
         prompt_path = Path(__file__).parent / 'prompts' / f'{prompt_name}.txt'
-        try:
-            return prompt_path.read_text()
-        except FileNotFoundError:
-            return (
-                "You are an expert Software Developer. Generate implementation files based on "
-                "the provided architecture and specifications.\n"
-                "Generate complete, production-ready code files following best practices. "
-                "Include proper error handling, documentation, and tests where appropriate."
-            )
+        if not prompt_path.exists():
+            raise FileNotFoundError(f"Missing prompt file: {prompt_path}. Create it under services/prompts/")
+
+        return prompt_path.read_text()
 
     def get_project_path(self) -> Path:
         """Return the project base path for the current project."""

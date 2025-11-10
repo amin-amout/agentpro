@@ -11,24 +11,15 @@ class BusinessService(BaseAgentService):
 
     async def process(self, input_data: str) -> Dict[str, Any]:
         """Process business requirements and create specifications."""
+        # Load external prompt text
+        prompt_path = Path(__file__).parent / 'prompts' / 'business.txt'
+        if not prompt_path.exists():
+            raise FileNotFoundError(f"Missing prompt file: {prompt_path}")
+        system_prompt = prompt_path.read_text()
+
         messages = [
-            {
-                "role": "system",
-                "content": """You are a Business Analyst specialized in software requirements.
-                Create detailed specifications including:
-                1. Project Overview
-                2. User Stories
-                3. Functional Requirements
-                4. Non-Functional Requirements
-                5. Business Rules
-                6. Success Criteria
-                
-                Format the output as structured JSON."""
-            },
-            {
-                "role": "user",
-                "content": f"Analyze these project requirements and create detailed specifications: {input_data}"
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Analyze these project requirements and create detailed specifications: {input_data}"}
         ]
         
         try:

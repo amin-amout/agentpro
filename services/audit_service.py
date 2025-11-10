@@ -11,27 +11,18 @@ class AuditService(BaseAgentService):
 
     async def process(self, input_data: str) -> Dict[str, Any]:
         """Review code quality and compliance."""
+        # Load external prompt
+        prompt_path = Path(__file__).parent / 'prompts' / 'audit.txt'
+        if not prompt_path.exists():
+            raise FileNotFoundError(f"Missing prompt file: {prompt_path}")
+        system_prompt = prompt_path.read_text()
+
         messages = [
-            {
-                "role": "system",
-                "content": """You are a Code Auditor specialized in code quality.
-                Perform a comprehensive code audit including:
-                1. Code Quality Analysis
-                2. Security Review
-                3. Performance Analysis
-                4. Best Practices Review
-                5. Compliance Check
-                6. Improvement Recommendations
-                
-                Format the output as structured JSON."""
-            },
-            {
-                "role": "user",
-                "content": f"Perform a code audit and find improvements for: {input_data}"
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Perform a code audit and find improvements for: {input_data}"}
         ]
-        
-        response = self._call_llm_api(messages)
+
+        response = await self._call_llm_api(messages)
         content = response["choices"][0]["message"]["content"]
         
         try:

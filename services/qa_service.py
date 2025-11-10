@@ -57,24 +57,15 @@ class QAService(BaseAgentService):
                     except json.JSONDecodeError:
                         parsed_input = content
 
+            # Load QA system prompt from external file to avoid embedding raw prompt
+            prompt_path = Path(__file__).parent / 'prompts' / 'qa.txt'
+            if not prompt_path.exists():
+                raise FileNotFoundError(f"Missing prompt file: {prompt_path}")
+            system_prompt = prompt_path.read_text()
+
             messages = [
-                {
-                    "role": "system",
-                    "content": """You are a QA Engineer specialized in software testing.
-                    Create a comprehensive test plan including:
-                    1. Test Strategy
-                    2. Test Cases
-                    3. Integration Tests
-                    4. Performance Tests
-                    5. Security Tests
-                    6. Acceptance Criteria
-                    
-                    Format the output as structured JSON."""
-                },
-                {
-                    "role": "user",
-                    "content": f"Create a test plan and test cases for this implementation: {json.dumps(parsed_input)}"
-                }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Create a test plan and test cases for this implementation: {json.dumps(parsed_input)}"}
             ]
             
             response = await self._call_llm_api(messages)
