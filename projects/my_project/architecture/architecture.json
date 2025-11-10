@@ -1,236 +1,375 @@
 {
   "SystemOverview": {
-    "Title": "LocalNetChat",
-    "Description": "A cross-platform, peer-to-peer desktop chat and file-sharing application that operates entirely on a local network without external servers. It discovers peers via UDP multicast, establishes TCP connections for text and file exchange, and optionally secures traffic with TLS.",
-    "Scope": "Desktop clients (Windows 10+, macOS 10.13+, Ubuntu 18.04+). Optional mobile preview (Android/iOS).",
-    "Stakeholders": [
-      {
-        "role": "End User",
-        "description": "Employees, students, or home users who need quick local communication."
-      },
-      {
-        "role": "IT Administrator",
-        "description": "Manages network policies and ensures compliance."
-      },
-      {
-        "role": "Developer",
-        "description": "Builds and maintains the application."
-      }
-    ],
-    "Assumptions": [
-      "All clients are on the same subnet or can discover each other via multicast/broadcast.",
-      "Users have permission to open required ports on local firewall.",
-      "File sizes are limited to 100 MB per transfer to keep bandwidth usage reasonable."
-    ],
-    "Constraints": [
-      "No internet or cloud services.",
-      "Cross-platform compatibility with Java 17 (Swing) or Electron/Node.js.",
-      "Security: encryption optional but recommended; no user authentication beyond local login."
-    ],
-    "SuccessCriteria": [
-      {
-        "id": "SC01",
-        "description": "All user stories are implemented and pass automated unit and integration tests."
-      },
-      {
-        "id": "SC02",
-        "description": "The app is stable on all targeted platforms with no memory leaks (>512 MB RAM usage)."
-      },
-      {
-        "id": "SC03",
-        "description": "User acceptance test score >= 90 % on usability survey."
-      },
-      {
-        "id": "SC04",
-        "description": "Network traffic analysis shows minimal overhead: discovery packets < 1 kB, message packets < 512 B."
-      }
+    "title": "JavaScript Ping Pong Game",
+    "description": "A lightweight, browser-based, real-time ping pong game built with HTML5 Canvas and vanilla JavaScript. The architecture follows a modular single-page application pattern, enabling easy extension, unit testing, and responsive UI across desktop and mobile browsers.",
+    "corePrinciples": [
+      "Pure client-side - no server required",
+      "ES6 modules for encapsulation",
+      "High frame-rate (>=60 FPS) via requestAnimationFrame",
+      "Responsive canvas with aspect-ratio preservation",
+      "Persist high scores locally using localStorage",
+      "Zero external dependencies"
     ]
   },
   "ComponentArchitecture": {
-    "PresentationLayer": {
-      "Description": "Swing/Electron UI, responsible for user interaction, status display, chat windows, file transfer dialogs, and keyboard shortcuts.",
-      "Modules": [
-        "MainWindow",
-        "UserListPanel",
-        "ChatWindow",
-        "FileTransferPanel",
-        "SettingsDialog"
-      ]
-    },
-    "DiscoveryService": {
-      "Description": "UDP multicast/broadcast component that sends and receives presence packets.",
-      "Responsibilities": [
-        "Broadcast presence every 5 s: JSON {type:'presence', id, name, status, port, ttl}",
-        "Listen for incoming presence packets and maintain a live peer cache.",
-        "Publish status updates every 10 s: JSON {type:'status', id, status}"
-      ]
-    },
-    "PeerConnectionManager": {
-      "Description": "Manages TCP sockets per peer, handles connection lifecycle, reconnection logic, and optional TLS.",
-      "Responsibilities": [
-        "Open outgoing TCP connection when user initiates chat/file transfer.",
-        "Accept incoming TCP connections on advertised port.",
-        "Maintain connection health and retry every 5 s if dropped.",
-        "Log connection attempts (audit) without logging message content."
-      ]
-    },
-    "MessageHandler": {
-      "Description": "Encodes/decodes JSON message frames and routes them to the UI.",
-      "Responsibilities": [
-        "Send/receive {type:'msg', from, to, timestamp, content}",
-        "Enforce in-memory session history only."
-      ]
-    },
-    "FileTransferService": {
-      "Description": "Handles file transfer protocol over a dedicated TCP stream.",
-      "Responsibilities": [
-        "Send header {type:'file', from, to, filename, size, checksum}",
-        "Stream raw file bytes with optional pause/resume.",
-        "Validate checksum on receipt.",
-        "Reject files >100 MB and notify user."
-      ]
-    },
-    "ConfigurationManager": {
-      "Description": "Persist user settings in a local encrypted file (optional).",
-      "Responsibilities": [
-        "Store display name, status message, default download folder, TLS toggle."
-      ]
-    },
-    "SecurityModule": {
-      "Description": "Optional TLS wrapper for all TCP streams.",
-      "Responsibilities": [
-        "Generate self-signed certificates per instance.",
-        "Provide encryption toggle in settings."
-      ]
-    },
-    "LoggingService": {
-      "Description": "Audit log of connection attempts and status changes.",
-      "Responsibilities": [
-        "Write to local file with timestamp, peer id, event type.",
-        "Exclude message payloads."
-      ]
-    }
+    "modules": [
+      {
+        "name": "GameEngine",
+        "responsibilities": [
+          "Orchestrates game loop",
+          "Manages state transitions (start, pause, reset)",
+          "Coordinates physics, AI, and rendering each frame"
+        ],
+        "publicApi": [
+          "start()",
+          "pause()",
+          "reset()",
+          "setMode(mode)",
+          "setDifficulty(level)"
+        ]
+      },
+      {
+        "name": "CanvasRenderer",
+        "responsibilities": [
+          "Draws paddles, ball, net, scoreboard",
+          "Handles responsive resizing",
+          "Applies visual feedback (flashing ball, paddle color change)"
+        ],
+        "publicApi": [
+          "render(state)",
+          "resize(width, height)"
+        ]
+      },
+      {
+        "name": "PhysicsEngine",
+        "responsibilities": [
+          "Calculates ball velocity and angle",
+          "Detects collisions (paddle, walls, net)",
+          "Applies friction and speed scaling"
+        ],
+        "publicApi": [
+          "updateBall(state, deltaTime)",
+          "handleCollision(state)"
+        ]
+      },
+      {
+        "name": "Paddle",
+        "responsibilities": [
+          "Encapsulates paddle position, size, and movement constraints",
+          "Exposes methods to update based on input or AI"
+        ],
+        "publicApi": [
+          "moveTo(y)",
+          "clamp()",
+          "getBounds()"
+        ]
+      },
+      {
+        "name": "Ball",
+        "responsibilities": [
+          "Encapsulates ball position, velocity, radius",
+          "Provides methods to reset and update position"
+        ],
+        "publicApi": [
+          "reset()",
+          "update(deltaTime)"
+        ]
+      },
+      {
+        "name": "AI",
+        "responsibilities": [
+          "Computes paddle movement based on ball position and difficulty",
+          "Implements reaction delay and anticipation"
+        ],
+        "publicApi": [
+          "update(state)",
+          "setDifficulty(level)"
+        ]
+      },
+      {
+        "name": "InputHandler",
+        "responsibilities": [
+          "Maps mouse, touch, and keyboard events to paddle movement",
+          "Ensures separation of control for each player"
+        ],
+        "publicApi": [
+          "init()",
+          "destroy()",
+          "getPlayerInput()"
+        ]
+      },
+      {
+        "name": "ScoreManager",
+        "responsibilities": [
+          "Tracks current score and high score",
+          "Persists high score to localStorage",
+          "Notifies UI on score changes"
+        ],
+        "publicApi": [
+          "increment(player)",
+          "reset()",
+          "getScores()",
+          "loadHighScore()",
+          "saveHighScore()"
+        ]
+      },
+      {
+        "name": "SettingsManager",
+        "responsibilities": [
+          "Holds game mode, difficulty, best-of settings",
+          "Provides UI for changing settings"
+        ],
+        "publicApi": [
+          "setMode()",
+          "setDifficulty()",
+          "getSettings()"
+        ]
+      },
+      {
+        "name": "EventBus",
+        "responsibilities": [
+          "Facilitates decoupled communication between modules",
+          "Publishes events such as 'pointScored', 'gameOver'"
+        ],
+        "publicApi": [
+          "on(event, handler)",
+          "emit(event, payload)"
+        ]
+      },
+      {
+        "name": "Utils",
+        "responsibilities": [
+          "Common helper functions (random angle, clamp, debounce, etc.)"
+        ],
+        "publicApi": [
+          "randomAngle()",
+          "clamp(value, min, max)",
+          "debounce(fn, delay)"
+        ]
+      }
+    ]
   },
   "DataModel": {
-    "Peer": {
-      "id": "UUID string",
-      "name": "String",
-      "status": "online|away|offline",
-      "port": "Integer",
-      "lastSeen": "ISO8601 timestamp"
+    "GameState": {
+      "players": [
+        {
+          "id": "player1",
+          "paddle": {
+            "x": 20,
+            "y": 0,
+            "width": 10,
+            "height": 80
+          },
+          "score": 0,
+          "color": "#FF5722"
+        },
+        {
+          "id": "player2",
+          "paddle": {
+            "x": "canvasWidth - 30",
+            "y": 0,
+            "width": 10,
+            "height": 80
+          },
+          "score": 0,
+          "color": "#2196F3"
+        }
+      ],
+      "ball": {
+        "x": 0,
+        "y": 0,
+        "radius": 8,
+        "velocityX": 0,
+        "velocityY": 0,
+        "speed": 300
+      },
+      "settings": {
+        "mode": "single",
+        "difficulty": "medium",
+        "bestOf": 5
+      },
+      "status": "stopped | running | paused | finished",
+      "highScore": 0
     },
-    "PresencePacket": {
-      "type": "presence",
-      "id": "String",
-      "name": "String",
-      "status": "String",
-      "port": "Integer",
-      "ttl": "Integer (seconds)"
-    },
-    "StatusPacket": {
-      "type": "status",
-      "id": "String",
-      "status": "String"
-    },
-    "MessagePacket": {
-      "type": "msg",
-      "from": "String",
-      "to": "String",
-      "timestamp": "ISO8601",
-      "content": "String"
-    },
-    "FileHeader": {
-      "type": "file",
-      "from": "String",
-      "to": "String",
-      "filename": "String",
-      "size": "Integer",
-      "checksum": "SHA-256 hex string"
+    "EventPayloads": {
+      "pointScored": {
+        "player": "player1 | player2",
+        "score": 0
+      },
+      "gameOver": {
+        "winner": "player1 | player2",
+        "score": 0
+      }
     }
   },
   "APIDesign": {
-    "DiscoveryAPI": {
-      "broadcastPresence": {
-        "method": "UDP",
-        "interval": "5s",
-        "payload": "PresencePacket"
+    "public": {
+      "GameEngine": {
+        "methods": [
+          {
+            "name": "start",
+            "description": "Begins or resumes the game loop.",
+            "parameters": [],
+            "returns": "void"
+          },
+          {
+            "name": "pause",
+            "description": "Pauses the game loop.",
+            "parameters": [],
+            "returns": "void"
+          },
+          {
+            "name": "reset",
+            "description": "Resets all state to initial configuration.",
+            "parameters": [],
+            "returns": "void"
+          },
+          {
+            "name": "setMode",
+            "description": "Selects 'single' or 'two'.",
+            "parameters": [
+              {
+                "name": "mode",
+                "type": "string"
+              }
+            ],
+            "returns": "void"
+          },
+          {
+            "name": "setDifficulty",
+            "description": "Sets AI difficulty level.",
+            "parameters": [
+              {
+                "name": "level",
+                "type": "string"
+              }
+            ],
+            "returns": "void"
+          }
+        ]
       },
-      "receivePresence": {
-        "method": "UDP",
-        "handler": "updatePeerCache(Peer)"
+      "ScoreManager": {
+        "methods": [
+          {
+            "name": "increment",
+            "parameters": [
+              {
+                "name": "playerId",
+                "type": "string"
+              }
+            ],
+            "returns": "void"
+          },
+          {
+            "name": "reset",
+            "returns": "void"
+          },
+          {
+            "name": "getScores",
+            "returns": "{ player1: number, player2: number }"
+          }
+        ]
+      },
+      "SettingsManager": {
+        "methods": [
+          {
+            "name": "getSettings",
+            "returns": "{ mode: string, difficulty: string, bestOf: number }"
+          }
+        ]
       }
     },
-    "StatusAPI": {
-      "broadcastStatus": {
-        "method": "UDP",
-        "interval": "10s",
-        "payload": "StatusPacket"
-      }
-    },
-    "PeerConnectionAPI": {
-      "connectToPeer(peerId)": {
-        "action": "TCP connect to advertised port",
-        "tlsEnabled": "boolean"
-      },
-      "acceptConnection": {
-        "action": "listen on local port",
-        "protocol": "TCP"
-      }
-    },
-    "MessageAPI": {
-      "sendMessage(toId, content)": {
-        "payload": "MessagePacket",
-        "transport": "TCP"
-      },
-      "receiveMessage(handler)": {
-        "transport": "TCP",
-        "handler": "displayMessage(MessagePacket)"
-      }
-    },
-    "FileTransferAPI": {
-      "requestFile(toId, filePath)": {
-        "payload": "FileHeader",
-        "transport": "TCP",
-        "postSend": "displayProgress"
-      },
-      "receiveFile(handler)": {
-        "transport": "TCP",
-        "handler": "writeFile(FileHeader, stream)"
-      }
-    }
+    "events": [
+      "pointScored",
+      "gameOver",
+      "scoreUpdated",
+      "settingsChanged"
+    ]
   },
   "TechnologyStack": {
-    "CoreLanguage": "Java 17 (Swing) or Node.js 20 (Electron)",
-    "Networking": "Java NIO / Node.js net module",
-    "Serialization": "Jackson (Java) or JSON5 (Node.js)",
-    "TLS": "Java SSLContext / Node.js TLS module",
-    "UI": "Swing (Java) or HTML/CSS/React (Electron)",
-    "BuildTool": "Maven (Java) or npm/yarn (Electron)",
-    "Testing": "JUnit 5 / TestFX (Java) or Jest + Spectron (Electron)",
-    "Packaging": "jpackage (Java) or Electron Packager",
-    "CrossPlatformSupport": "JavaFX/Native look-and-feel or Electron auto-update",
-    "Logging": "SLF4J + Logback (Java) or Winston (Node.js)",
-    "Configuration": "Properties file (Java) or JSON (Electron)",
-    "Checksum": "SHA-256 (built-in libraries)"
+    "frontend": [
+      "HTML5 (semantic markup)",
+      "CSS3 (flexbox, media queries, custom properties)",
+      "JavaScript ES6+ modules",
+      "Canvas API (2D context)",
+      "localStorage for persistence"
+    ],
+    "buildTools": [
+      "npm (scripts only - no external libs)",
+      "Babel (transpile to ES5 for legacy browsers if needed)",
+      "Webpack / Rollup (module bundler, optional)",
+      "ESLint (linting)",
+      "Jest (unit testing)",
+      "GitHub Actions (CI/CD)"
+    ],
+    "deployment": [
+      "GitHub Pages / Netlify (static hosting)",
+      "HTTPS enforced"
+    ]
   },
   "DeploymentArchitecture": {
-    "Installation": {
-      "Windows": "MSI or EXE built with jpackage / Electron Installer",
-      "macOS": "DMG or PKG",
-      "Linux": "AppImage / DEB / RPM"
+    "hosting": "Static file hosting (GitHub Pages or Netlify)",
+    "CI": {
+      "workflow": "GitHub Actions",
+      "triggers": [
+        "push",
+        "pull_request"
+      ],
+      "jobs": [
+        {
+          "name": "Lint",
+          "steps": [
+            "install",
+            "eslint"
+          ]
+        },
+        {
+          "name": "Test",
+          "steps": [
+            "install",
+            "jest"
+          ]
+        },
+        {
+          "name": "Build",
+          "steps": [
+            "npm run build"
+          ]
+        },
+        {
+          "name": "Deploy",
+          "steps": [
+            "if: github.ref == 'refs/heads/main'",
+            "deploy to GitHub Pages"
+          ]
+        }
+      ]
     },
-    "Execution": {
-      "Auto-start": "Optional system tray icon; user can launch manually.",
-      "Firewall": "Requests to open UDP multicast port 5000 and TCP port range 6000-6100.",
-      "Privileges": "No admin rights required; uses standard user directories for downloads."
-    },
-    "UpdateStrategy": {
-      "Desktop": "In-app self-update via local file or network-based update server (optional).",
-      "MobilePreview": "APK/IPA built separately."
-    },
-    "ResourceConstraints": {
-      "Memory": "<512 MB per instance",
-      "CPU": "Single thread for UI, separate thread pool for networking (max 4 threads)."
-    }
+    "monitoring": "None required - purely client-side",
+    "security": "All assets served over HTTPS; no external scripts or libraries"
+  },
+  "NonFunctionalCompliance": {
+    "performance": "60 FPS via requestAnimationFrame; delta-time based physics",
+    "reliability": "Try/catch around animation loop; fallback to pause on error",
+    "usability": "Intuitive mouse/touch controls; keyboard shortcuts (Space: pause, R: reset)",
+    "accessibility": "ARIA labels on buttons; keyboard navigation; high-contrast theme option",
+    "security": "No external dependencies; CSP header recommended for production",
+    "maintainability": "ES6 module structure, JSDoc comments, README, CI pipeline"
+  },
+  "TestingStrategy": {
+    "unitTests": [
+      "PhysicsEngine.updateBall",
+      "PhysicsEngine.handleCollision",
+      "ScoreManager.increment",
+      "AI.update"
+    ],
+    "integrationTests": [
+      "Full game cycle: serve -> score -> reset",
+      "Responsive resizing",
+      "Touch input handling"
+    ],
+    "coverageGoal": ">=80% on core logic",
+    "testRunner": "Jest",
+    "mocking": "Mock canvas context for unit tests"
   }
 }

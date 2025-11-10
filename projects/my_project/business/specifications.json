@@ -1,190 +1,208 @@
 {
   "ProjectOverview": {
-    "Title": "LocalNetChat",
-    "Description": "A lightweight desktop chat application that enables users on the same local network to exchange text messages, display user status, and share files. The application uses peer\u2011to\u2011peer communication over TCP/UDP and is designed for office, educational, or home environments where internet connectivity is limited or unavailable.",
-    "Scope": "Desktop clients (Windows, macOS, Linux) with optional mobile preview. No external server; all data is transmitted directly between clients.",
-    "Stakeholders": [
-      {
-        "role": "End User",
-        "description": "Employees, students, or home users who need quick local communication."
-      },
-      {
-        "role": "IT Administrator",
-        "description": "Manages network policies and ensures compliance."
-      },
-      {
-        "role": "Developer",
-        "description": "Builds and maintains the application."
-      }
+    "title": "JavaScript Ping Pong Game",
+    "description": "A browser\u2011based, real\u2011time ping pong (table tennis) game built with HTML5 Canvas and vanilla JavaScript. The game supports both single\u2011player (against AI) and two\u2011player (local) modes, includes physics, scoring, and a simple UI. It is designed to be lightweight, responsive, and easily extensible.",
+    "targetPlatforms": [
+      "Desktop browsers (Chrome, Firefox, Safari, Edge)",
+      "Mobile browsers (iOS Safari, Android Chrome)"
     ],
-    "Assumptions": [
-      "All clients are on the same subnet or can discover each other via multicast/broadcast.",
-      "Users have permission to open required ports on local firewall.",
-      "File sizes are limited to 100\u202fMB per transfer to keep bandwidth usage reasonable."
+    "technologyStack": [
+      "HTML5",
+      "CSS3",
+      "JavaScript ES6+",
+      "Canvas API"
     ],
-    "Constraints": [
-      "No internet or cloud services.",
-      "Cross\u2011platform compatibility with Java 17 (Swing) or Electron/Node.js.",
-      "Security: encryption optional but recommended; no user authentication beyond local login."
-    ]
+    "deliverables": [
+      "Fully functional web page with game canvas",
+      "Responsive UI for mobile and desktop",
+      "Source code repository (Git)",
+      "Documentation (README, API reference, test plan)",
+      "Unit and integration tests"
+    ],
+    "timeline": "6 weeks (Planning, Development, QA, Deployment)",
+    "budget": "Not applicable \u2013 open\u2011source project"
   },
   "UserStories": [
     {
-      "id": "US01",
-      "title": "Discover and connect to peers",
-      "description": "As a user, I want the app to automatically discover other users on the local network so that I can start chatting without manual IP entry.",
+      "id": "US1",
+      "role": "Player",
+      "description": "As a player, I want to control a paddle with my mouse or touch so that I can hit the ball.",
       "acceptanceCriteria": [
-        "The app broadcasts a presence packet every 5\u202fseconds.",
-        "A list of online users appears in the UI within 2\u202fseconds of startup.",
-        "Clicking a user initiates a chat window."
+        "Paddle follows cursor or touch position horizontally.",
+        "Movement is limited to the player's half of the court.",
+        "Paddle reacts instantly (no noticeable lag)."
       ]
     },
     {
-      "id": "US02",
-      "title": "Send and receive text messages",
-      "description": "As a user, I want to send text messages that appear instantly in the chat window.",
+      "id": "US2",
+      "role": "Player",
+      "description": "As a player, I want to play against an AI opponent so that I can practice without a second player.",
       "acceptanceCriteria": [
-        "Messages are displayed with timestamp and sender name.",
-        "Message history persists for the current session only."
+        "AI paddle moves automatically with a realistic reaction time.",
+        "Difficulty levels (Easy, Medium, Hard) adjust AI speed and anticipation."
       ]
     },
     {
-      "id": "US03",
-      "title": "View user status",
-      "description": "As a user, I want to see whether other users are online, away, or offline.",
+      "id": "US3",
+      "role": "Player",
+      "description": "As a player, I want to play with a friend on the same device so that we can compete locally.",
       "acceptanceCriteria": [
-        "Status updates are broadcast every 10\u202fseconds.",
-        "Status changes are reflected in the user list in real time."
+        "Two paddles controlled by separate input methods (mouse or keyboard).",
+        "Each paddle is color\u2011coded and labeled."
       ]
     },
     {
-      "id": "US04",
-      "title": "Share files with peers",
-      "description": "As a user, I want to send a file to another user and receive a prompt to accept or decline.",
+      "id": "US4",
+      "role": "Player",
+      "description": "As a player, I want to see my score so that I know who is winning.",
       "acceptanceCriteria": [
-        "File transfer initiates after user confirms.",
-        "Transfer progress bar is visible.",
-        "Accepted files are saved to a user\u2011defined folder."
+        "Current score is displayed prominently above the game area.",
+        "Score updates instantly after a point is scored."
       ]
     },
     {
-      "id": "US05",
-      "title": "Handle network interruptions",
-      "description": "As a user, I want the app to notify me if a peer disconnects or the network is lost.",
+      "id": "US5",
+      "role": "Player",
+      "description": "As a player, I want to start, pause, and reset the game so that I can control the flow.",
       "acceptanceCriteria": [
-        "Disconnection causes a status change to offline.",
-        "Attempting to send a message to a disconnected user shows an error."
+        "Start button initiates a new game.",
+        "Pause button freezes ball and paddle movement.",
+        "Reset button clears score and returns to initial state."
+      ]
+    },
+    {
+      "id": "US6",
+      "role": "Player",
+      "description": "As a player, I want the game to be responsive so that it works on both desktop and mobile.",
+      "acceptanceCriteria": [
+        "Canvas resizes to fit screen while maintaining aspect ratio.",
+        "Touch controls work on mobile devices."
+      ]
+    },
+    {
+      "id": "US7",
+      "role": "Developer",
+      "description": "As a developer, I want the code to be modular and testable so that I can maintain and extend it.",
+      "acceptanceCriteria": [
+        "Game logic is separated into modules (Game, Paddle, Ball, AI, UI).",
+        "Unit tests cover core physics and scoring logic."
       ]
     }
   ],
   "FunctionalRequirements": [
     {
-      "id": "FR01",
-      "description": "Network discovery",
-      "details": "Implement UDP multicast/broadcast to announce presence and listen for peers. Each client sends a JSON packet containing user ID, name, status, and listening port."
+      "id": "FR1",
+      "description": "Render game elements (paddles, ball, net, scoreboard) on an HTML5 canvas."
     },
     {
-      "id": "FR02",
-      "description": "Peer connection establishment",
-      "details": "When a user selects a peer, the client initiates a TCP connection on the peer's advertised port. The connection is used for text and file transfer."
+      "id": "FR2",
+      "description": "Implement ball physics: velocity, angle of deflection based on paddle contact point."
     },
     {
-      "id": "FR03",
-      "description": "Message protocol",
-      "details": "Define a lightweight JSON schema for messages: {type:'msg', from:'id', to:'id', timestamp:'ISO8601', content:'text'}."
+      "id": "FR3",
+      "description": "Detect collisions between ball and paddles, walls, and net."
     },
     {
-      "id": "FR04",
-      "description": "Status protocol",
-      "details": "Send periodic status updates: {type:'status', id:'id', status:'online|away|offline'}."
+      "id": "FR4",
+      "description": "Update scores when the ball passes a paddle."
     },
     {
-      "id": "FR05",
-      "description": "File transfer protocol",
-      "details": "Use a separate TCP stream with header: {type:'file', from:'id', to:'id', filename:'string', size:bytes}. Followed by raw file bytes. Support pause/resume via checksum verification."
+      "id": "FR5",
+      "description": "Provide three difficulty settings for AI: Easy (slow, predictable), Medium (moderate speed), Hard (fast, anticipatory)."
     },
     {
-      "id": "FR06",
-      "description": "User interface",
-      "details": "Main window shows user list with status icons, chat area, and file transfer panel. Context menu to start chat or send file."
+      "id": "FR6",
+      "description": "Allow the user to select game mode: Single\u2011player or Two\u2011player."
     },
     {
-      "id": "FR07",
-      "description": "Configuration",
-      "details": "Allow user to set display name, status message, and default download folder."
+      "id": "FR7",
+      "description": "Implement start, pause, and reset controls via buttons and keyboard shortcuts."
     },
     {
-      "id": "FR08",
-      "description": "Encryption (optional)",
-      "details": "Provide a toggle to enable TLS for all peer connections."
+      "id": "FR8",
+      "description": "Persist high score in localStorage to display a leaderboard."
+    },
+    {
+      "id": "FR9",
+      "description": "Provide visual feedback: ball flashes when speed increases, paddle changes color when hit."
+    },
+    {
+      "id": "FR10",
+      "description": "Implement responsive design: canvas resizes with window, controls adapt to touch."
     }
   ],
   "NonFunctionalRequirements": [
     {
-      "id": "NFR01",
-      "description": "Performance",
-      "details": "Message latency < 200\u202fms on a typical LAN. File transfer throughput \u2265 5\u202fMbps."
+      "id": "NFR1",
+      "description": "Performance: Frame rate of at least 60 FPS on modern browsers."
     },
     {
-      "id": "NFR02",
-      "description": "Scalability",
-      "details": "Support up to 50 concurrent peers without noticeable UI lag."
+      "id": "NFR2",
+      "description": "Reliability: Game should recover gracefully from errors (e.g., lost animation frame)."
     },
     {
-      "id": "NFR03",
-      "description": "Reliability",
-      "details": "Automatic reconnection attempts every 5\u202fseconds if connection drops."
+      "id": "NFR3",
+      "description": "Usability: Controls should be intuitive with minimal learning curve."
     },
     {
-      "id": "NFR04",
-      "description": "Usability",
-      "details": "All primary actions (send message, send file, change status) must be accessible via keyboard shortcuts."
+      "id": "NFR4",
+      "description": "Accessibility: Keyboard navigation support and ARIA labels for controls."
     },
     {
-      "id": "NFR05",
-      "description": "Security",
-      "details": "Data in transit is encrypted if TLS is enabled. No sensitive data is stored on disk."
+      "id": "NFR5",
+      "description": "Security: No external dependencies that could introduce vulnerabilities."
     },
     {
-      "id": "NFR06",
-      "description": "Compatibility",
-      "details": "Runs on Windows 10+, macOS 10.13+, and Ubuntu 18.04+."
+      "id": "NFR6",
+      "description": "Maintainability: Codebase follows ES6 module conventions, with clear documentation."
     }
   ],
   "BusinessRules": [
     {
-      "id": "BR01",
-      "description": "All users must be on the same subnet or have multicast support for discovery to work."
+      "id": "BR1",
+      "rule": "A point is awarded to a player when the ball passes beyond the opponent's paddle (i.e., crosses the left or right boundary)."
     },
     {
-      "id": "BR02",
-      "description": "File size limit per transfer is 100\u202fMB; larger files must be split or rejected."
+      "id": "BR2",
+      "rule": "The game ends when a player reaches 11 points, unless 'best of' is specified in settings."
     },
     {
-      "id": "BR03",
-      "description": "If a user sets status to 'away', they cannot receive file transfer requests."
+      "id": "BR3",
+      "rule": "The ball starts at the center with a random initial direction each serve."
     },
     {
-      "id": "BR04",
-      "description": "The application must log all connection attempts for audit purposes but must not log message contents."
+      "id": "BR4",
+      "rule": "If the ball touches the net, it is considered a fault and the point is awarded to the opponent."
+    },
+    {
+      "id": "BR5",
+      "rule": "The AI paddle cannot move beyond the vertical bounds of the canvas."
+    },
+    {
+      "id": "BR6",
+      "rule": "Score display must show both players' scores side by side."
     }
   ],
   "SuccessCriteria": [
     {
-      "id": "SC01",
-      "description": "All user stories are implemented and pass automated unit and integration tests."
+      "id": "SC1",
+      "description": "The game runs smoothly at 60 FPS on a mid\u2011range laptop and a modern smartphone."
     },
     {
-      "id": "SC02",
-      "description": "The app is stable on all targeted platforms with no memory leaks (> 512\u202fMB RAM usage)."
+      "id": "SC2",
+      "description": "All user stories are fully implemented and pass acceptance tests."
     },
     {
-      "id": "SC03",
-      "description": "User acceptance test score \u2265 90\u202f% on usability survey."
+      "id": "SC3",
+      "description": "Unit tests cover >80% of the core logic (ball movement, collision detection, scoring)."
     },
     {
-      "id": "SC04",
-      "description": "Network traffic analysis shows minimal overhead: discovery packets < 1\u202fkB, message packets < 512\u202fB."
+      "id": "SC4",
+      "description": "The UI is responsive and works on Chrome, Firefox, Safari, Edge, iOS Safari, and Android Chrome."
+    },
+    {
+      "id": "SC5",
+      "description": "The final product is documented (README, code comments, API reference) and the repository contains a CI pipeline that runs tests on every commit."
     }
   ]
 }
